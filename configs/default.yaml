@@ -1,0 +1,18 @@
+schema_version: 1
+
+pipeline:
+  name: EnzyNotation
+
+input:
+  allowed_residues: ACDEFGHIKLMNPQRSTVWYBXZJUO
+  allow_terminal_stop: true
+  min_sequence_length: 1
+  max_sequence_length: null
+  uppercase: true
+
+output:
+  line_width: 60
+
+logging:
+  level: INFO
+

@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.coverage
+.pytest_cache/
+.ruff_cache/
+.venv/
+build/
+dist/
+
+# Runtime artifacts are intentionally kept out of version control.
+data/
+databases/
+logs/
+results/
+
