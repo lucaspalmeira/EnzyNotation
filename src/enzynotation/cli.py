@@ -17,6 +17,8 @@ from enzynotation.fasta import (
     write_normalized_fasta,
 )
 from enzynotation.logging_utils import configure_logging
+from enzynotation.runner import PipelineRunner
+from enzynotation.state import RunStatus
 
 LOGGER = logging.getLogger(__name__)
 
@@ -47,6 +49,35 @@ def build_parser() -> argparse.ArgumentParser:
         "--output", type=Path, help="write normalized FASTA when validation succeeds"
     )
     validate.add_argument("--report", type=Path, help="write a JSON validation report")
+
+    run = subparsers.add_parser("run", help="run the local validation-only workflow")
+    run.add_argument("input", type=Path, help="input protein FASTA")
+    run.add_argument(
+        "--config",
+        action="append",
+        default=[],
+        type=Path,
+        metavar="PATH",
+        help="YAML overlay; may be supplied more than once",
+    )
+    run.add_argument("--run-id", help="stable run identifier used for resume")
+    run.add_argument(
+        "--results-dir",
+        type=Path,
+        default=Path("results"),
+        help="root directory for scientific run artifacts",
+    )
+    run.add_argument(
+        "--logs-dir",
+        type=Path,
+        default=Path("logs"),
+        help="root directory for stage stdout/stderr logs",
+    )
+    run.add_argument(
+        "--no-resume",
+        action="store_true",
+        help="fail if the selected run already exists",
+    )
     return parser
 
 
@@ -102,6 +133,25 @@ def _run_validate(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_pipeline(args: argparse.Namespace) -> int:
+    config = load_config(args.config)
+    logging_config = config.section("logging")
+    configure_logging(str(logging_config["level"]))
+    runner = PipelineRunner(
+        config,
+        results_root=args.results_dir,
+        logs_root=args.logs_dir,
+    )
+    result = runner.run(
+        args.input,
+        run_id=args.run_id,
+        resume=not args.no_resume,
+    )
+    print(f"RUN {result.status.value.upper()}: {result.run_id}")
+    print(f"Manifest: {result.manifest_path}")
+    return 0 if result.status is not RunStatus.FAILED else 1
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the EnzyNotation command-line interface."""
 
@@ -110,6 +160,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         if args.command == "validate":
             return _run_validate(args)
+        if args.command == "run":
+            return _run_pipeline(args)
     except EnzyNotationError as exc:
         parser.exit(2, f"enzynotation: error: {exc}\n")
     parser.error(f"unknown command: {args.command}")

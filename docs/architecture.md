@@ -8,9 +8,10 @@ them to a separate integration layer that may produce an EC-number prediction.
 The architecture is family-agnostic: enzyme-family and EC-specific knowledge is
 configuration, not Python control flow.
 
-Only Milestones 0 and 1 are currently implemented. The evidence providers,
-integration engine, execution backends, and final reports described here are
-contracts for later milestones, not currently available commands.
+Milestones 0 through 2 are currently implemented. The local execution core can
+run and resume the validation stage. Evidence providers, the integration
+engine, Slurm execution, and final reports described here remain contracts for
+later milestones and are not currently available commands.
 
 ## Architectural boundaries
 
@@ -228,4 +229,3 @@ branches in the core runner or integration engine.
 
 Contract-breaking changes require a new `schema_version`. Parsers may evolve
 independently but must record their own name and version in provenance.
-

@@ -7,7 +7,7 @@ of evidence rather than assigned from the first BLAST hit.
 
 ## Project status
 
-Milestones 0 and 1 are implemented. The repository currently provides:
+Milestones 0 through 2 are implemented. The repository currently provides:
 
 - an installable Python package and command-line interface;
 - layered YAML configuration;
@@ -17,6 +17,9 @@ Milestones 0 and 1 are implemented. The repository currently provides:
 - versioned JSON Schema contracts for pipeline, family, EC-rule, and evidence
   documents;
 - documented architecture and scientific inference policy;
+- a validation-only local workflow with manifests and resumable stage state;
+- content-based input/configuration invalidation and atomic stage completion;
+- command, software-version, checksum, stdout, and stderr provenance;
 - unit tests and linting configuration.
 
 Evidence collection, evidence integration, EC prediction, confidence
@@ -82,6 +85,65 @@ Validation currently checks:
 Lowercase sequences are converted to uppercase by default. A single terminal
 `*` is accepted, removed from normalized output, and reported as a warning.
 
+## Local validation workflow
+
+Run the Milestone 2 validation workflow with an explicit ID:
+
+```bash
+enzynotation run proteins.fasta --run-id example-run
+```
+
+Scientific artifacts are written under `results/example-run/` and stage logs
+under `logs/example-run/`. Repeating the command with the same run ID resumes
+the run. A completed validation stage is skipped only when its input,
+validation-related configuration, implementation version, dependencies, and
+recorded outputs are unchanged.
+
+Use custom roots or disable resume explicitly:
+
+```bash
+enzynotation run proteins.fasta \
+  --run-id example-run \
+  --results-dir project-results \
+  --logs-dir project-logs
+
+enzynotation run proteins.fasta \
+  --run-id new-run \
+  --no-resume
+```
+
+When no run ID is supplied, EnzyNotation generates a timestamped unique ID.
+Resuming therefore requires reusing an explicit ID or a configured
+`pipeline.run_id`.
+
+The validation-only workflow currently creates:
+
+```text
+results/<run_id>/
+├── manifest.json
+├── config/resolved-pipeline.yaml
+├── input/
+│   ├── original.fasta
+│   ├── normalized.fasta
+│   └── validation.json
+├── stages/validate/
+│   ├── status.json
+│   ├── raw/
+│   └── normalized/
+├── evidence/
+├── integration/
+└── reports/
+
+logs/<run_id>/validate/
+├── stdout.log
+└── stderr.log
+```
+
+Failed validation produces a failed stage status and manifest without a stale
+normalized FASTA. Interrupted attempts are retried, previous attempt records
+are retained under the stage history directory, and changed FASTA content
+invalidates the completed validation stage.
+
 ## Configuration
 
 Built-in defaults are mirrored in `configs/default.yaml`. One or more YAML
@@ -117,8 +179,9 @@ logging:
 
 The versioned contracts for future pipeline, family, EC-rule, and evidence
 documents are in `configs/schema/`, with valid examples in `examples/configs/`.
-The current CLI validates only the Milestone 1 fields shown above; it does not
-yet load the family or EC-rule documents or run evidence providers.
+The current configuration loader validates the Milestone 1 fields shown above,
+and the local runner additionally honors `pipeline.run_id` when present. It does
+not yet load family or EC-rule documents or run evidence providers.
 
 Configuration precedence is deterministic: built-in defaults are followed by
 site/project overlays in supplied order, and a later value overrides an earlier
@@ -165,14 +228,14 @@ ruff format --check src tests
 configs/             Defaults and JSON Schema contracts
 docs/                Architecture, data contracts, and scientific policy
 examples/configs/    Valid contract examples for future milestones
-src/enzynotation/    Python package
+src/enzynotation/    Python package, stages, and local execution backend
 tests/               Unit, CLI, and schema tests
 ```
 
-The planned pipeline will add `scripts/`, `slurm/`, `docker/`, `data/`,
-`databases/`, `results/`, and `logs/` as their corresponding milestones are
-implemented. Large biological databases will not be stored in the repository
-or embedded in container images.
+The workflow creates `results/` and `logs/` when run. Later milestones will add
+`scripts/`, `slurm/`, `docker/`, `data/`, and `databases/` as required. Large
+biological databases will not be stored in the repository or embedded in
+container images.
 
 ## Planned pipeline
 
