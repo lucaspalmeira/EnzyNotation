@@ -1,0 +1,75 @@
+schema_version: 1
+
+pipeline:
+  name: EnzyNotation example
+  run_id: example-run-001
+  description: Illustrative future multi-evidence run
+
+input:
+  allowed_residues: ACDEFGHIKLMNPQRSTVWYBXZJUO
+  allow_terminal_stop: true
+  min_sequence_length: 20
+  max_sequence_length: null
+  uppercase: true
+
+output:
+  line_width: 60
+  formats:
+    - tsv
+    - json
+    - html
+
+logging:
+  level: INFO
+
+configuration:
+  family_files:
+    - examples/configs/family.example.yaml
+  ec_rule_files:
+    - examples/configs/ec-rules.example.yaml
+
+paths:
+  data: data
+  databases: databases
+  results: results
+  logs: logs
+  structures: data/structures
+
+execution:
+  backend: local
+  resume: true
+  fail_on_optional_stage_error: false
+  default_resources:
+    cpus: 2
+    memory_mb: 4096
+    walltime_minutes: 60
+    gpus: 0
+  stage_resources:
+    blastp:
+      cpus: 8
+      memory_mb: 8192
+      walltime_minutes: 120
+
+tools:
+  blastp:
+    enabled: true
+    required: true
+    executable: blastp
+    database: curated_proteins
+    parameters:
+      evalue: 1.0e-10
+      max_target_seqs: 100
+    resources:
+      cpus: 8
+      memory_mb: 8192
+      walltime_minutes: 120
+  catalytic_motif:
+    enabled: true
+    required: false
+
+databases:
+  curated_proteins:
+    path: databases/curated-proteins
+    version: example-2026-01
+    release_date: "2026-01-15"
+    checksum: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

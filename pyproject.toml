@@ -9,6 +9,7 @@ description = "Reusable, evidence-based protein enzyme annotation pipeline"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "jsonschema>=4.21",
     "PyYAML>=6.0",
 ]
 

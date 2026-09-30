@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "evidence_id": "invalid-failed-record",
+  "query": {
+    "query_id": "query_001",
+    "sequence_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "sequence_length": 317
+  },
+  "source": {
+    "id": "blastp",
+    "evidence_class": "sequence_homology",
+    "correlation_group": "example-group"
+  },
+  "record_status": "failed",
+  "reason_code": "nonzero_exit",
+  "assertion": {
+    "target": {
+      "type": "ec",
+      "candidate_ec": {
+        "namespace": "EC",
+        "ec": "3.2.1.99",
+        "depth": 4,
+        "completeness": "complete"
+      }
+    },
+    "effect": "supports"
+  },
+  "provenance": {
+    "run_id": "example-run-001",
+    "stage_id": "blastp",
+    "generated_at": "2026-09-30T15:00:00Z",
+    "parser": {
+      "name": "enzynotation-blast-parser",
+      "version": "1.0.0"
+    },
+    "tool": {
+      "name": "blastp",
+      "version": "2.16.0"
+    },
+    "databases": [],
+    "raw_artifact": {
+      "path": "stages/blastp/raw/stderr.log",
+      "format": "text"
+    },
+    "configuration_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "input_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+  }
+}

@@ -7,13 +7,16 @@ of evidence rather than assigned from the first BLAST hit.
 
 ## Project status
 
-Milestone 1 is implemented. The repository currently provides:
+Milestones 0 and 1 are implemented. The repository currently provides:
 
 - an installable Python package and command-line interface;
 - layered YAML configuration;
 - protein FASTA validation and normalization;
 - EC-number parsing and normalization;
 - machine-readable validation reports;
+- versioned JSON Schema contracts for pipeline, family, EC-rule, and evidence
+  documents;
+- documented architecture and scientific inference policy;
 - unit tests and linting configuration.
 
 Evidence collection, evidence integration, EC prediction, confidence
@@ -24,6 +27,7 @@ planned but are **not implemented yet**.
 
 - Python 3.11 or newer
 - PyYAML 6.0 or newer
+- jsonschema 4.21 or newer
 
 Development checks additionally use pytest, pytest-cov, and Ruff.
 
@@ -111,9 +115,19 @@ logging:
   level: INFO
 ```
 
+The versioned contracts for future pipeline, family, EC-rule, and evidence
+documents are in `configs/schema/`, with valid examples in `examples/configs/`.
+The current CLI validates only the Milestone 1 fields shown above; it does not
+yet load the family or EC-rule documents or run evidence providers.
+
+Configuration precedence is deterministic: built-in defaults are followed by
+site/project overlays in supplied order, and a later value overrides an earlier
+one. Mapping values merge recursively; arrays and scalar values are replaced.
+Family and EC-rule documents are independent contracts rather than implicit
+pipeline overlays.
+
 Family-specific motifs, EC rules, tool paths, database locations, thresholds,
-and compute resources will be introduced in later milestones and will remain in
-configuration rather than being hardcoded in Python.
+and compute resources remain configuration rather than hardcoded Python logic.
 
 ## EC normalization
 
@@ -148,9 +162,11 @@ ruff format --check src tests
 ## Repository structure
 
 ```text
-configs/             Default and, later, family/EC/tool configuration
+configs/             Defaults and JSON Schema contracts
+docs/                Architecture, data contracts, and scientific policy
+examples/configs/    Valid contract examples for future milestones
 src/enzynotation/    Python package
-tests/               Unit and CLI tests
+tests/               Unit, CLI, and schema tests
 ```
 
 The planned pipeline will add `scripts/`, `slurm/`, `docker/`, `data/`,
@@ -170,6 +186,33 @@ Docker will support local development. Apptainer/Singularity and dependency-
 aware Slurm jobs will support cluster execution. Until those milestones are
 implemented, no container or Slurm commands are available.
 
+## Architecture and data contracts
+
+The planned pipeline separates input handling, evidence providers, parsers,
+integration, reporting, and execution backends. Providers emit observations;
+only the integration layer may produce a final EC prediction. Raw artifacts are
+preserved separately from normalized canonical evidence.
+
+The canonical evidence contract distinguishes `observed`, `negative`,
+`missing`, and `failed` records and requires query identity, evidence source and
+class, a correlation group, and complete provenance. EC candidates carry a
+four-level normalized EC string together with matching depth and
+complete/partial status. Correlated records cannot satisfy independent-evidence
+requirements merely because they came from different executables.
+
+See:
+
+- `docs/architecture.md` for component boundaries, configuration precedence,
+  execution semantics, and the planned run layout;
+- `docs/data-contracts.md` for canonical identifiers, evidence, EC candidates,
+  provenance, conflicts, family rules, and EC rules;
+- `docs/scientific-policy.md` for non-negotiable inference and confidence
+  policies.
+
+The schemas are contracts for upcoming implementations. Their presence does not
+make BLASTp, CLEAN, domain, motif, structure, integration, reporting, container,
+or Slurm commands available yet.
+
 ## Scientific and architectural policy
 
 - Homology detection is separate from functional inference.
@@ -179,4 +222,6 @@ implemented, no container or Slurm commands are available.
 - Major disagreements between evidence sources must be reported explicitly.
 - Missing evidence and tool failures must not be presented as biological
   disagreement.
-
+- Correlated evidence must not be counted as independent confirmation.
+- Confidence categories remain heuristic until calibrated against a curated,
+  versioned benchmark.

@@ -1,0 +1,111 @@
+schema_version: 1
+
+ruleset:
+  id: example_ec_rules
+  version: 1.0.0
+  description: Illustrative, uncalibrated integration policy
+  calibration:
+    status: heuristic
+    documentation: Thresholds have not been calibrated against a curated benchmark
+
+correlations:
+  - correlation_id: structure_same_reference
+    sources:
+      - foldseek
+      - tmalign
+    scope: same_reference
+    rationale: Discovery and alignment against one structure share reference lineage
+
+conflict_policy:
+  candidate_disagreement:
+    severity: major
+    action: force_unresolved
+  hierarchy_disagreement:
+    severity: major
+    action: force_unresolved
+  required_feature_absent:
+    severity: major
+    action: force_unresolved
+  forbidden_feature_present:
+    severity: major
+    action: force_unresolved
+  sequence_structure_disagreement:
+    severity: major
+    action: force_unresolved
+  curation_disagreement:
+    severity: major
+    action: force_unresolved
+  rule_disagreement:
+    severity: major
+    action: force_unresolved
+  provenance_inadequate:
+    severity: minor
+    action: retain
+
+confidence_policy:
+  high:
+    minimum_independent_classes: 3
+    minimum_supporting_records: 3
+    maximum_conflicting_classes: 0
+    require_complete_ec: true
+    required_rule_ids:
+      - required_domain_support
+  medium:
+    minimum_independent_classes: 2
+    minimum_supporting_records: 2
+    maximum_conflicting_classes: 1
+    require_complete_ec: false
+    required_rule_ids: []
+  low:
+    minimum_independent_classes: 1
+    minimum_supporting_records: 1
+    maximum_conflicting_classes: 1
+    require_complete_ec: false
+    required_rule_ids: []
+  unresolved:
+    on_major_conflict: true
+    on_tied_candidates: true
+    on_no_candidate: true
+    on_required_rule_failure: true
+
+ec_rules:
+  - rule_id: example_complete_ec
+    candidate_ec: 3.2.1.99
+    description: Illustrative complete EC rule
+    applies_to_families:
+      - example_hydrolase_family
+    allow_partial_prediction: false
+    requirements:
+      all:
+        - condition_id: required_domain_support
+          description: Required family domain must support the candidate
+          source_ids:
+            - hmmer
+            - interproscan
+          effects:
+            - supports
+          record_statuses:
+            - observed
+          minimum_records: 1
+          minimum_independent_groups: 1
+      any:
+        - condition_id: sequence_or_structure_support
+          evidence_classes:
+            - sequence_homology
+            - structure_homology
+          effects:
+            - supports
+          record_statuses:
+            - observed
+          minimum_records: 1
+          minimum_independent_groups: 1
+      none:
+        - condition_id: forbidden_feature_present
+          source_ids:
+            - catalytic_motif
+          effects:
+            - supports
+          record_statuses:
+            - observed
+          minimum_records: 1
+          minimum_independent_groups: 1

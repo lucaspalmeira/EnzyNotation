@@ -1,0 +1,549 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enzynotation.org/schema/v1/evidence.schema.json",
+  "title": "EnzyNotation canonical evidence record",
+  "description": "Lossless normalized evidence or an explicit missing/failed state for one query and provider.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "evidence_id",
+    "query",
+    "source",
+    "record_status",
+    "provenance"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "evidence_id": {
+      "$ref": "#/$defs/opaqueIdentifier"
+    },
+    "query": {
+      "$ref": "#/$defs/query"
+    },
+    "source": {
+      "$ref": "#/$defs/source"
+    },
+    "record_status": {
+      "enum": ["observed", "negative", "missing", "failed"]
+    },
+    "assertion": {
+      "$ref": "#/$defs/assertion"
+    },
+    "reason_code": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "message": {
+      "type": "string"
+    },
+    "metrics": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "type": ["string", "number", "integer", "boolean", "null"]
+      }
+    },
+    "criteria": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/criterion"
+      }
+    },
+    "reference": {
+      "$ref": "#/$defs/reference"
+    },
+    "provenance": {
+      "$ref": "#/$defs/provenance"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "record_status": {
+            "const": "observed"
+          }
+        },
+        "required": ["record_status"]
+      },
+      "then": {
+        "required": ["assertion"]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "record_status": {
+            "const": "negative"
+          }
+        },
+        "required": ["record_status"]
+      },
+      "then": {
+        "required": ["assertion", "reason_code"],
+        "properties": {
+          "assertion": {
+            "properties": {
+              "effect": {
+                "const": "contradicts"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "record_status": {
+            "enum": ["missing", "failed"]
+          }
+        },
+        "required": ["record_status"]
+      },
+      "then": {
+        "required": ["reason_code"],
+        "not": {
+          "required": ["assertion"]
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "opaqueIdentifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "stableIdentifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "sourceIdentifier": {
+      "oneOf": [
+        {
+          "enum": [
+            "blastp",
+            "clean",
+            "hmmer",
+            "interproscan",
+            "catalytic_motif",
+            "foldseek",
+            "tmalign"
+          ]
+        },
+        {
+          "type": "string",
+          "pattern": "^x_[a-z0-9][a-z0-9_]*$"
+        }
+      ]
+    },
+    "evidenceClass": {
+      "enum": [
+        "sequence_homology",
+        "learned_sequence_model",
+        "domain_architecture",
+        "catalytic_motif",
+        "structure_homology",
+        "curated_annotation",
+        "user_assertion"
+      ]
+    },
+    "query": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["query_id", "sequence_sha256", "sequence_length"],
+      "properties": {
+        "query_id": {
+          "$ref": "#/$defs/opaqueIdentifier"
+        },
+        "original_id": {
+          "$ref": "#/$defs/opaqueIdentifier"
+        },
+        "sequence_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "sequence_length": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "evidence_class", "correlation_group"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/sourceIdentifier"
+        },
+        "evidence_class": {
+          "$ref": "#/$defs/evidenceClass"
+        },
+        "correlation_group": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        }
+      }
+    },
+    "ecStringComplete": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*\\.[1-9][0-9]*\\.[1-9][0-9]*\\.[1-9][0-9]*$"
+    },
+    "ecStringDepthThree": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*\\.[1-9][0-9]*\\.[1-9][0-9]*\\.-$"
+    },
+    "ecStringDepthTwo": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*\\.[1-9][0-9]*\\.-\\.-$"
+    },
+    "ecStringDepthOne": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*\\.-\\.-\\.-$"
+    },
+    "candidateECBase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["namespace", "ec", "depth", "completeness"],
+      "properties": {
+        "namespace": {
+          "const": "EC"
+        },
+        "ec": {
+          "type": "string"
+        },
+        "depth": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4
+        },
+        "completeness": {
+          "enum": ["complete", "partial"]
+        },
+        "label": {
+          "type": "string"
+        }
+      }
+    },
+    "candidateEC": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/candidateECBase"
+        },
+        {
+          "oneOf": [
+            {
+              "properties": {
+                "ec": {
+                  "$ref": "#/$defs/ecStringComplete"
+                },
+                "depth": {
+                  "const": 4
+                },
+                "completeness": {
+                  "const": "complete"
+                }
+              }
+            },
+            {
+              "properties": {
+                "ec": {
+                  "$ref": "#/$defs/ecStringDepthThree"
+                },
+                "depth": {
+                  "const": 3
+                },
+                "completeness": {
+                  "const": "partial"
+                }
+              }
+            },
+            {
+              "properties": {
+                "ec": {
+                  "$ref": "#/$defs/ecStringDepthTwo"
+                },
+                "depth": {
+                  "const": 2
+                },
+                "completeness": {
+                  "const": "partial"
+                }
+              }
+            },
+            {
+              "properties": {
+                "ec": {
+                  "$ref": "#/$defs/ecStringDepthOne"
+                },
+                "depth": {
+                  "const": 1
+                },
+                "completeness": {
+                  "const": "partial"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "target": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "candidate_ec"],
+          "properties": {
+            "type": {
+              "const": "ec"
+            },
+            "candidate_ec": {
+              "$ref": "#/$defs/candidateEC"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "id"],
+          "properties": {
+            "type": {
+              "enum": ["family", "feature"]
+            },
+            "id": {
+              "$ref": "#/$defs/stableIdentifier"
+            }
+          }
+        }
+      ]
+    },
+    "assertion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target", "effect"],
+      "properties": {
+        "target": {
+          "$ref": "#/$defs/target"
+        },
+        "effect": {
+          "enum": ["supports", "contradicts", "neutral"]
+        }
+      }
+    },
+    "criterionValue": {
+      "type": ["string", "number", "integer", "boolean", "null"]
+    },
+    "criterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "criterion_id",
+        "metric",
+        "operator",
+        "threshold",
+        "observed_value",
+        "passed"
+      ],
+      "properties": {
+        "criterion_id": {
+          "$ref": "#/$defs/stableIdentifier"
+        },
+        "metric": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "operator": {
+          "enum": ["eq", "ne", "lt", "lte", "gt", "gte", "in", "contains"]
+        },
+        "threshold": {
+          "$ref": "#/$defs/criterionValue"
+        },
+        "observed_value": {
+          "$ref": "#/$defs/criterionValue"
+        },
+        "passed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["accession", "curated"],
+      "properties": {
+        "accession": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "curated": {
+          "type": "boolean"
+        },
+        "annotation_source": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "parser": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "executable": {
+          "type": "string",
+          "minLength": 1
+        },
+        "container_image": {
+          "type": "string",
+          "minLength": 1
+        },
+        "container_digest": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "database": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "release_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "checksum": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9]+:[a-fA-F0-9]+$"
+        }
+      }
+    },
+    "rawArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "format"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "format": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "record_locator": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "stage_id",
+        "generated_at",
+        "parser",
+        "tool",
+        "databases",
+        "raw_artifact",
+        "configuration_sha256",
+        "input_sha256"
+      ],
+      "properties": {
+        "run_id": {
+          "$ref": "#/$defs/stableIdentifier"
+        },
+        "stage_id": {
+          "$ref": "#/$defs/stableIdentifier"
+        },
+        "generated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "parser": {
+          "$ref": "#/$defs/parser"
+        },
+        "tool": {
+          "$ref": "#/$defs/tool"
+        },
+        "databases": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/database"
+          }
+        },
+        "raw_artifact": {
+          "$ref": "#/$defs/rawArtifact"
+        },
+        "configuration_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "input_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "command": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,508 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enzynotation.org/schema/v1/ec-rules.schema.json",
+  "title": "EnzyNotation EC-specific integration rules",
+  "description": "Versioned candidate requirements, evidence correlations, conflicts, and confidence gates.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "ruleset",
+    "correlations",
+    "conflict_policy",
+    "confidence_policy",
+    "ec_rules"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "ruleset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "calibration"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/stableIdentifier"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "calibration": {
+          "$ref": "#/$defs/calibration"
+        }
+      }
+    },
+    "correlations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/correlationRule"
+      }
+    },
+    "conflict_policy": {
+      "$ref": "#/$defs/conflictPolicy"
+    },
+    "confidence_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["high", "medium", "low", "unresolved"],
+      "properties": {
+        "high": {
+          "$ref": "#/$defs/confidenceGate"
+        },
+        "medium": {
+          "$ref": "#/$defs/confidenceGate"
+        },
+        "low": {
+          "$ref": "#/$defs/confidenceGate"
+        },
+        "unresolved": {
+          "$ref": "#/$defs/unresolvedPolicy"
+        }
+      }
+    },
+    "ec_rules": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ecRule"
+      },
+      "minItems": 1
+    }
+  },
+  "$defs": {
+    "stableIdentifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "familyIdentifier": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "sourceIdentifier": {
+      "oneOf": [
+        {
+          "enum": [
+            "blastp",
+            "clean",
+            "hmmer",
+            "interproscan",
+            "catalytic_motif",
+            "foldseek",
+            "tmalign"
+          ]
+        },
+        {
+          "type": "string",
+          "pattern": "^x_[a-z0-9][a-z0-9_]*$"
+        }
+      ]
+    },
+    "evidenceClass": {
+      "enum": [
+        "sequence_homology",
+        "learned_sequence_model",
+        "domain_architecture",
+        "catalytic_motif",
+        "structure_homology",
+        "curated_annotation",
+        "user_assertion"
+      ]
+    },
+    "ecString": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*\\.[1-9][0-9]*\\.[1-9][0-9]*\\.[1-9][0-9]*$"
+        },
+        {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*\\.[1-9][0-9]*\\.[1-9][0-9]*\\.-$"
+        },
+        {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*\\.[1-9][0-9]*\\.-\\.-$"
+        },
+        {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*\\.-\\.-\\.-$"
+        }
+      ]
+    },
+    "calibration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": {
+          "enum": ["heuristic", "calibrated"]
+        },
+        "benchmark_id": {
+          "$ref": "#/$defs/stableIdentifier"
+        },
+        "benchmark_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evaluated_at": {
+          "type": "string",
+          "format": "date"
+        },
+        "documentation": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "calibrated"
+              }
+            },
+            "required": ["status"]
+          },
+          "then": {
+            "required": [
+              "benchmark_id",
+              "benchmark_version",
+              "evaluated_at",
+              "documentation"
+            ]
+          }
+        }
+      ]
+    },
+    "correlationRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["correlation_id", "sources", "scope", "rationale"],
+      "properties": {
+        "correlation_id": {
+          "$ref": "#/$defs/stableIdentifier"
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/sourceIdentifier"
+          },
+          "minItems": 2,
+          "uniqueItems": true
+        },
+        "scope": {
+          "enum": [
+            "always",
+            "same_reference",
+            "same_database",
+            "same_model",
+            "same_training_lineage"
+          ]
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "conflictHandling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["severity", "action"],
+      "properties": {
+        "severity": {
+          "enum": ["minor", "major"]
+        },
+        "action": {
+          "enum": ["retain", "force_unresolved", "resolve_by_rule"]
+        },
+        "resolution_rule_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/stableIdentifier"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "action": {
+                "const": "resolve_by_rule"
+              }
+            },
+            "required": ["action"]
+          },
+          "then": {
+            "required": ["resolution_rule_ids"]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "action": {
+                "enum": ["retain", "force_unresolved"]
+              }
+            },
+            "required": ["action"]
+          },
+          "then": {
+            "not": {
+              "required": ["resolution_rule_ids"]
+            }
+          }
+        }
+      ]
+    },
+    "conflictPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_disagreement",
+        "hierarchy_disagreement",
+        "required_feature_absent",
+        "forbidden_feature_present",
+        "sequence_structure_disagreement",
+        "curation_disagreement",
+        "rule_disagreement",
+        "provenance_inadequate"
+      ],
+      "properties": {
+        "candidate_disagreement": {
+          "$ref": "#/$defs/conflictHandling"
+        },
+        "hierarchy_disagreement": {
+          "$ref": "#/$defs/conflictHandling"
+        },
+        "required_feature_absent": {
+          "$ref": "#/$defs/conflictHandling"
+        },
+        "forbidden_feature_present": {
+          "$ref": "#/$defs/conflictHandling"
+        },
+        "sequence_structure_disagreement": {
+          "$ref": "#/$defs/conflictHandling"
+        },
+        "curation_disagreement": {
+          "$ref": "#/$defs/conflictHandling"
+        },
+        "rule_disagreement": {
+          "$ref": "#/$defs/conflictHandling"
+        },
+        "provenance_inadequate": {
+          "$ref": "#/$defs/conflictHandling"
+        }
+      }
+    },
+    "confidenceGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "minimum_independent_classes",
+        "minimum_supporting_records",
+        "maximum_conflicting_classes",
+        "require_complete_ec",
+        "required_rule_ids"
+      ],
+      "properties": {
+        "minimum_independent_classes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "minimum_supporting_records": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "maximum_conflicting_classes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "require_complete_ec": {
+          "type": "boolean"
+        },
+        "required_rule_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/stableIdentifier"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "unresolvedPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "on_major_conflict",
+        "on_tied_candidates",
+        "on_no_candidate",
+        "on_required_rule_failure"
+      ],
+      "properties": {
+        "on_major_conflict": {
+          "type": "boolean"
+        },
+        "on_tied_candidates": {
+          "type": "boolean"
+        },
+        "on_no_candidate": {
+          "type": "boolean"
+        },
+        "on_required_rule_failure": {
+          "type": "boolean"
+        }
+      }
+    },
+    "metricCondition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "operator", "value"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "operator": {
+          "enum": ["eq", "ne", "lt", "lte", "gt", "gte", "in"]
+        },
+        "value": {
+          "type": ["string", "number", "integer", "boolean", "array"]
+        }
+      }
+    },
+    "evidenceCondition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "condition_id",
+        "effects",
+        "minimum_records",
+        "minimum_independent_groups"
+      ],
+      "properties": {
+        "condition_id": {
+          "$ref": "#/$defs/stableIdentifier"
+        },
+        "description": {
+          "type": "string"
+        },
+        "source_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/sourceIdentifier"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "evidence_classes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidenceClass"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "effects": {
+          "type": "array",
+          "items": {
+            "enum": ["supports", "contradicts", "neutral"]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "record_statuses": {
+          "type": "array",
+          "items": {
+            "enum": ["observed", "negative"]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "minimum_records": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "minimum_independent_groups": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "metric": {
+          "$ref": "#/$defs/metricCondition"
+        }
+      },
+      "anyOf": [
+        {
+          "required": ["source_ids"]
+        },
+        {
+          "required": ["evidence_classes"]
+        }
+      ]
+    },
+    "requirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["all", "any", "none"],
+      "properties": {
+        "all": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidenceCondition"
+          }
+        },
+        "any": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidenceCondition"
+          }
+        },
+        "none": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidenceCondition"
+          }
+        }
+      }
+    },
+    "ecRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rule_id",
+        "candidate_ec",
+        "allow_partial_prediction",
+        "requirements"
+      ],
+      "properties": {
+        "rule_id": {
+          "$ref": "#/$defs/stableIdentifier"
+        },
+        "candidate_ec": {
+          "$ref": "#/$defs/ecString"
+        },
+        "description": {
+          "type": "string"
+        },
+        "applies_to_families": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/familyIdentifier"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "allow_partial_prediction": {
+          "type": "boolean"
+        },
+        "requirements": {
+          "$ref": "#/$defs/requirements"
+        }
+      }
+    }
+  }
+}

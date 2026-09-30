@@ -1,0 +1,322 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enzynotation.org/schema/v1/pipeline.schema.json",
+  "title": "EnzyNotation pipeline configuration",
+  "description": "Versioned configuration for input handling, execution, tools, paths, and resources.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "pipeline",
+    "input",
+    "output",
+    "logging"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "pipeline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "run_id": {
+          "$ref": "#/$defs/stableIdentifier"
+        },
+        "description": {
+          "type": "string"
+        }
+      }
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allowed_residues",
+        "allow_terminal_stop",
+        "min_sequence_length",
+        "max_sequence_length",
+        "uppercase"
+      ],
+      "properties": {
+        "allowed_residues": {
+          "type": "string",
+          "pattern": "^[A-Z]+$",
+          "minLength": 1
+        },
+        "allow_terminal_stop": {
+          "type": "boolean"
+        },
+        "min_sequence_length": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_sequence_length": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "uppercase": {
+          "type": "boolean"
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["line_width"],
+      "properties": {
+        "line_width": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "formats": {
+          "type": "array",
+          "items": {
+            "enum": ["tsv", "json", "jsonl", "html"]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      }
+    },
+    "logging": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level"],
+      "properties": {
+        "level": {
+          "enum": ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]
+        }
+      }
+    },
+    "configuration": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "family_files": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path"
+          },
+          "uniqueItems": true
+        },
+        "ec_rule_files": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "$ref": "#/$defs/path"
+        },
+        "databases": {
+          "$ref": "#/$defs/path"
+        },
+        "results": {
+          "$ref": "#/$defs/path"
+        },
+        "logs": {
+          "$ref": "#/$defs/path"
+        },
+        "structures": {
+          "$ref": "#/$defs/path"
+        }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "backend": {
+          "enum": ["local", "slurm"]
+        },
+        "resume": {
+          "type": "boolean"
+        },
+        "fail_on_optional_stage_error": {
+          "type": "boolean"
+        },
+        "default_resources": {
+          "$ref": "#/$defs/resources"
+        },
+        "stage_resources": {
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/stableIdentifier"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/resources"
+          }
+        },
+        "slurm": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "partition": {
+              "type": "string",
+              "minLength": 1
+            },
+            "account": {
+              "type": "string",
+              "minLength": 1
+            },
+            "qos": {
+              "type": "string",
+              "minLength": 1
+            },
+            "extra_sbatch_args": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "tools": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/sourceIdentifier"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/toolConfiguration"
+      }
+    },
+    "databases": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/stableIdentifier"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/databaseConfiguration"
+      }
+    }
+  },
+  "$defs": {
+    "path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stableIdentifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "sourceIdentifier": {
+      "oneOf": [
+        {
+          "enum": [
+            "blastp",
+            "clean",
+            "hmmer",
+            "interproscan",
+            "catalytic_motif",
+            "foldseek",
+            "tmalign"
+          ]
+        },
+        {
+          "type": "string",
+          "pattern": "^x_[a-z0-9][a-z0-9_]*$"
+        }
+      ]
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cpus", "memory_mb", "walltime_minutes"],
+      "properties": {
+        "cpus": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "memory_mb": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "walltime_minutes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "gpus": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "parameterValue": {
+      "type": ["string", "number", "integer", "boolean", "null"]
+    },
+    "toolConfiguration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "required"],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "executable": {
+          "$ref": "#/$defs/path"
+        },
+        "database": {
+          "$ref": "#/$defs/stableIdentifier"
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/parameterValue"
+          }
+        },
+        "resources": {
+          "$ref": "#/$defs/resources"
+        }
+      }
+    },
+    "databaseConfiguration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version"],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/path"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "release_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "checksum": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9]+:[a-fA-F0-9]+$"
+        }
+      }
+    }
+  }
+}

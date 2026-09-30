@@ -1,0 +1,16 @@
+schema_version: 1
+family:
+  id: invalid_family
+  name: Invalid family example
+  version: 1.0.0
+rules:
+  domains: []
+  motifs:
+    - rule_id: invalid_ec_hierarchy
+      pattern: "D..D"
+      requirement: supporting
+      min_occurrences: 1
+      candidate_ecs:
+        - 3.-.1.-
+  structures: []
+

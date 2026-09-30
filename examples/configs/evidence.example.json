@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "evidence_id": "ev-query_001-blastp-hit_001",
+  "query": {
+    "query_id": "query_001",
+    "original_id": "query_001",
+    "sequence_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "sequence_length": 317
+  },
+  "source": {
+    "id": "blastp",
+    "evidence_class": "sequence_homology",
+    "correlation_group": "curated_proteins:REF001:annotation_lineage_1"
+  },
+  "record_status": "observed",
+  "assertion": {
+    "target": {
+      "type": "ec",
+      "candidate_ec": {
+        "namespace": "EC",
+        "ec": "3.2.1.99",
+        "depth": 4,
+        "completeness": "complete",
+        "label": "illustrative hydrolase activity"
+      }
+    },
+    "effect": "supports"
+  },
+  "metrics": {
+    "sequence_identity": 0.71,
+    "query_coverage": 0.94,
+    "subject_coverage": 0.91,
+    "evalue": 1e-80,
+    "bit_score": 422.5
+  },
+  "criteria": [
+    {
+      "criterion_id": "minimum_query_coverage",
+      "metric": "query_coverage",
+      "operator": "gte",
+      "threshold": 0.8,
+      "observed_value": 0.94,
+      "passed": true
+    }
+  ],
+  "reference": {
+    "accession": "REF001",
+    "description": "Illustrative curated protein",
+    "curated": true,
+    "annotation_source": "example-curated-mapping-1"
+  },
+  "provenance": {
+    "run_id": "example-run-001",
+    "stage_id": "blastp",
+    "generated_at": "2026-09-30T15:00:00Z",
+    "parser": {
+      "name": "enzynotation-blast-parser",
+      "version": "1.0.0"
+    },
+    "tool": {
+      "name": "blastp",
+      "version": "2.16.0",
+      "executable": "blastp",
+      "container_image": "example/enzynotation:0.1.0",
+      "container_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "databases": [
+      {
+        "name": "curated_proteins",
+        "version": "example-2026-01",
+        "release_date": "2026-01-15",
+        "path": "databases/curated-proteins",
+        "checksum": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    ],
+    "raw_artifact": {
+      "path": "stages/blastp/raw/hits.tsv",
+      "format": "blast-tabular-6",
+      "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "record_locator": "line:2"
+    },
+    "configuration_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "input_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "command": [
+      "blastp",
+      "-query",
+      "input/normalized.fasta",
+      "-db",
+      "databases/curated-proteins"
+    ]
+  }
+}

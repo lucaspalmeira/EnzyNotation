@@ -1,0 +1,50 @@
+schema_version: 1
+
+family:
+  id: example_hydrolase_family
+  name: Example hydrolase family
+  version: 1.0.0
+  description: Illustrative rules only; not a biological recommendation
+  aliases:
+    - example-hydrolases
+  references:
+    - https://example.org/example-family
+
+rules:
+  domains:
+    - rule_id: required_example_domain
+      description: Example domain required for family membership
+      source: pfam
+      signature_id: PF00000
+      requirement: required
+      min_count: 1
+      max_count: 1
+      minimum_query_coverage: 0.25
+      maximum_evalue: 1.0e-5
+      candidate_ecs:
+        - 3.2.1.-
+  motifs:
+    - rule_id: supporting_catalytic_pattern
+      description: Illustrative catalytic pattern in the domain context
+      pattern: "[ST]..[DE]"
+      requirement: supporting
+      min_occurrences: 1
+      max_occurrences: null
+      position:
+        relative_to: domain_start
+        domain_rule_id: required_example_domain
+        min_offset: 0
+        max_offset: 250
+      candidate_ecs:
+        - 3.2.1.99
+  structures:
+    - rule_id: supporting_reference_structure
+      description: Illustrative structural support
+      reference_ids:
+        - EXAMPLE_STRUCTURE_A
+      requirement: supporting
+      minimum_tm_score: 0.55
+      minimum_query_coverage: 0.6
+      candidate_ecs:
+        - 3.2.1.99
+

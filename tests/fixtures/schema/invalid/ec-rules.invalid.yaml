@@ -1,0 +1,52 @@
+schema_version: 1
+ruleset:
+  id: invalid_calibrated_rules
+  version: 1.0.0
+  calibration:
+    status: calibrated
+correlations: []
+conflict_policy:
+  candidate_disagreement: &major
+    severity: major
+    action: force_unresolved
+  hierarchy_disagreement: *major
+  required_feature_absent: *major
+  forbidden_feature_present: *major
+  sequence_structure_disagreement: *major
+  curation_disagreement: *major
+  rule_disagreement: *major
+  provenance_inadequate:
+    severity: minor
+    action: retain
+confidence_policy:
+  high:
+    minimum_independent_classes: 2
+    minimum_supporting_records: 2
+    maximum_conflicting_classes: 0
+    require_complete_ec: true
+    required_rule_ids: []
+  medium:
+    minimum_independent_classes: 1
+    minimum_supporting_records: 1
+    maximum_conflicting_classes: 1
+    require_complete_ec: false
+    required_rule_ids: []
+  low:
+    minimum_independent_classes: 1
+    minimum_supporting_records: 1
+    maximum_conflicting_classes: 1
+    require_complete_ec: false
+    required_rule_ids: []
+  unresolved:
+    on_major_conflict: true
+    on_tied_candidates: true
+    on_no_candidate: true
+    on_required_rule_failure: true
+ec_rules:
+  - rule_id: invalid_example
+    candidate_ec: 3.2.1.-
+    allow_partial_prediction: true
+    requirements:
+      all: []
+      any: []
+      none: []
