@@ -7,7 +7,7 @@ of evidence rather than assigned from the first BLAST hit.
 
 ## Project status
 
-Milestones 0 through 4 are implemented. The repository currently provides:
+Milestones 0 through 5 are implemented. The repository currently provides:
 
 - an installable Python package and command-line interface;
 - layered YAML configuration;
@@ -29,11 +29,14 @@ Milestones 0 through 4 are implemented. The repository currently provides:
 - literal and regular-expression catalytic motifs, named residues, positional
   tolerances, occurrence bounds, ordering, and distance constraints;
 - canonical domain and motif evidence with explicit absence/failure semantics;
+- opt-in CLEAN execution through Docker Compose or an external command;
+- explicit CLEAN distance, GMM-estimate, and opaque-score semantics;
+- canonical, correlated CLEAN candidate evidence without final EC assignment;
 - unit tests and linting configuration.
 
-CLEAN and structure evidence providers, evidence integration, final EC
-prediction, confidence classification, final annotation reports, containers,
-and Slurm execution are planned but are **not implemented yet**.
+Structure evidence providers, evidence integration, final EC prediction,
+confidence classification, final annotation reports, general containers, and
+Slurm execution are planned but are **not implemented yet**.
 
 ## Requirements
 
@@ -48,6 +51,12 @@ Domain evidence requires HMMER 3 and an external Pfam-compatible or custom HMM
 library. InterProScan is optional and requires a separately installed external
 distribution and its data. Motif analysis has no external executable
 dependency.
+
+CLEAN evidence uses an externally managed CLEAN runtime. Docker Compose with
+`moleculemaker/clean-image-amd64` is the recommended local adapter; an external
+command strategy supports environments managed through Conda, wrappers, or a
+future Apptainer command. CLEAN, model weights, ESM weights, and Docker Python
+libraries are not package dependencies and are not distributed here.
 
 Development checks additionally use pytest, pytest-cov, and Ruff.
 
@@ -237,6 +246,41 @@ See [docs/domains-and-motifs.md](docs/domains-and-motifs.md) for configuration,
 motif syntax, coverage definitions, outputs, failure states, limitations, and
 instructions for adding enzyme-family profiles.
 
+## CLEAN evidence
+
+CLEAN is opt-in through a separate versioned provider configuration:
+
+```bash
+enzynotation run proteins.fasta \
+  --run-id clean-example \
+  --clean-config configs/tools/clean.yaml
+```
+
+The default adapter constructs an ephemeral `docker compose run --rm` command,
+stages the validated FASTA for the upstream basename-oriented wrapper, and
+copies the raw result into the canonical run directory. `command` mode is also
+available for an externally installed CLEAN environment. Neither mode adds
+PyTorch, ESM, CLEAN, or Docker libraries to EnzyNotation's Python dependencies.
+
+Raw results are preserved at `stages/clean/raw/clean_result.csv`; normalized
+candidates, rejected records, the resolved provider snapshot, and a summary are
+written under `stages/clean/normalized/`; canonical candidates are written to
+`evidence/clean_evidence.jsonl`. The command, runtime and image metadata,
+model identity, configuration/input checksums, and raw-record locator remain
+traceable through provenance and stage state.
+
+Score semantics are explicit. Raw maximum-separation distance is lower-is-
+better and is not a confidence. The GMM-transformed value is higher-is-better,
+but EnzyNotation does not treat it as a calibrated probability. Opaque metrics
+are not numerically reordered unless a future configuration establishes their
+meaning. CLEAN's own candidate list and order are always preserved.
+
+CLEAN produces correlated model-prediction evidence only. It never emits a
+final EnzyNotation EC annotation and cannot bypass the future integration and
+conflict-handling layer. See [docs/clean.md](docs/clean.md) for runtime setup,
+licensing, mounts, filtering, outputs, score interpretation, failure semantics,
+and limitations.
+
 ## Configuration
 
 Built-in defaults are mirrored in `configs/default.yaml`. One or more YAML
@@ -270,15 +314,14 @@ logging:
   level: INFO
 ```
 
-The versioned contracts for pipeline, BLAST, HMMER, InterProScan, family,
-EC-rule, and evidence documents are in `configs/schema/`, with valid examples
-in `examples/configs/`.
+The versioned contracts for pipeline, BLAST, CLEAN, HMMER, InterProScan,
+family, EC-rule, and evidence documents are in `configs/schema/`, with valid
+examples in `examples/configs/`.
 The current configuration loader validates the Milestone 1 fields shown above,
-and the local runner additionally honors `pipeline.run_id` when present. The
-BLAST provider loads its separate versioned YAML document when
-`--blast-config` is supplied. Domain/motif workflows load a family document with
-`--family-config` plus the selected tool documents. EC-rule documents are not
-yet loaded.
+and the local runner additionally honors `pipeline.run_id` when present. BLAST
+and CLEAN load separate versioned provider documents when their CLI options are
+supplied. Domain/motif workflows load a family document with `--family-config`
+plus the selected tool documents. EC-rule documents are not yet loaded.
 
 Configuration precedence is deterministic: built-in defaults are followed by
 site/project overlays in supplied order, and a later value overrides an earlier
@@ -323,6 +366,7 @@ ruff format --check src tests
 
 ```text
 configs/             Defaults, tool configurations, and JSON Schema contracts
+docker/              CLEAN provider-specific Compose adapter
 docs/                Architecture, provider docs, contracts, and policy
 examples/configs/    Valid contract and implemented family examples
 scripts/             External database setup helpers
@@ -331,20 +375,23 @@ tests/               Unit, integration, CLI, fixture, and schema tests
 ```
 
 The workflow creates `results/` and `logs/` when run. Later milestones will add
-`slurm/`, `docker/`, `data/`, and `databases/` as required. Large biological
-databases will not be stored in the repository or embedded in container images.
+general container packaging, `slurm/`, `data/`, and `databases/` as required.
+The existing `docker/clean.compose.yml` is only a CLEAN runtime adapter. Large
+biological databases and model weights will not be stored in the repository or
+embedded in EnzyNotation container images.
 
 ## Planned pipeline
 
-Later milestones will add independent adapters for CLEAN, Foldseek, and
-TM-align. Their raw results will join the implemented BLAST, domain, and motif
-evidence before a separate inference layer evaluates candidate EC numbers,
-conflicting evidence, and transparent confidence categories (`high`, `medium`,
-`low`, and `unresolved`).
+Later milestones will add independent adapters for Foldseek and TM-align. Their
+raw results will join the implemented BLAST, CLEAN, domain, and motif evidence
+before a separate inference layer evaluates candidate EC numbers, conflicting
+evidence, and transparent confidence categories (`high`, `medium`, `low`, and
+`unresolved`).
 
-Docker will support local development. Apptainer/Singularity and dependency-
-aware Slurm jobs will support cluster execution. Until those milestones are
-implemented, no container or Slurm commands are available.
+General Docker packaging will support local development. Apptainer/Singularity
+and dependency-aware Slurm jobs will support cluster execution. Until those
+milestones are implemented, the CLEAN-specific Compose adapter is the only
+container command supplied and no Slurm commands are available.
 
 ## Architecture and data contracts
 
@@ -369,13 +416,14 @@ See:
 - `docs/scientific-policy.md` for non-negotiable inference and confidence
   policies;
 - `docs/domains-and-motifs.md` for the implemented Milestone 4 providers and
-  family-profile syntax.
+  family-profile syntax;
+- `docs/clean.md` for the implemented Milestone 5 provider and score semantics.
 
 The family schema is consumed by implemented domain and motif stages. EC
 integration, confidence, and reporting schemas remain contracts for upcoming
-implementations. BLASTp, HMMER/InterProScan domain evidence, and catalytic motif
-analysis are available; CLEAN, structure, integration, reporting, container,
-and Slurm commands are not.
+implementations. BLASTp, CLEAN, HMMER/InterProScan domain evidence, and
+catalytic motif analysis are available; structure, integration, reporting,
+general container, and Slurm commands are not.
 
 ## Scientific and architectural policy
 

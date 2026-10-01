@@ -1,0 +1,12 @@
+services:
+  clean:
+    image: "${CLEAN_IMAGE:-moleculemaker/clean-image-amd64}"
+    pull_policy: never
+    working_dir: /app
+    volumes:
+      - type: bind
+        source: "${CLEAN_INPUT_DIR:?set CLEAN_INPUT_DIR}"
+        target: /app/data/inputs
+      - type: bind
+        source: "${CLEAN_OUTPUT_DIR:?set CLEAN_OUTPUT_DIR}"
+        target: /app/results/inputs

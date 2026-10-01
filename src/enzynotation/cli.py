@@ -20,11 +20,13 @@ from enzynotation.fasta import (
 from enzynotation.logging_utils import configure_logging
 from enzynotation.runner import PipelineRunner
 from enzynotation.stages.blast import BlastStage
+from enzynotation.stages.clean import CleanStage
 from enzynotation.stages.domains import DomainsStage
 from enzynotation.stages.motifs import MotifsStage
 from enzynotation.stages.validate import ValidationStage
 from enzynotation.state import RunStatus
 from enzynotation.tools.blast import load_blast_config
+from enzynotation.tools.clean import load_clean_config
 from enzynotation.tools.hmmer import load_hmmer_config
 from enzynotation.tools.interpro import load_interpro_config
 from enzynotation.workflow import Workflow
@@ -61,7 +63,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     run = subparsers.add_parser(
         "run",
-        help="run validation with optional sequence, domain, and motif evidence",
+        help=(
+            "run validation with optional sequence, model, domain, and motif evidence"
+        ),
     )
     run.add_argument("input", type=Path, help="input protein FASTA")
     run.add_argument(
@@ -95,6 +99,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         metavar="PATH",
         help="enable the BLASTp evidence stage with this YAML configuration",
+    )
+    run.add_argument(
+        "--clean-config",
+        type=Path,
+        metavar="PATH",
+        help="enable CLEAN model-prediction evidence with this YAML configuration",
     )
     run.add_argument(
         "--family-config",
@@ -187,6 +197,9 @@ def _run_pipeline(args: argparse.Namespace) -> int:
     if args.blast_config is not None:
         blast_config = load_blast_config(args.blast_config)
         stages.append(BlastStage(blast_config))
+    if args.clean_config is not None:
+        clean_config = load_clean_config(args.clean_config)
+        stages.append(CleanStage(clean_config))
     domain_requested = args.hmmer_config is not None or args.interpro_config is not None
     family_requested = domain_requested or args.motifs
     if family_requested and args.family_config is None:

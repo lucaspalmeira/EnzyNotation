@@ -1,0 +1,230 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enzynotation.org/schema/v1/clean.schema.json",
+  "title": "EnzyNotation CLEAN provider configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "clean"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "clean": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "required",
+        "execution",
+        "implementation",
+        "metric",
+        "model",
+        "mounts",
+        "filtering",
+        "resource_fingerprints"
+      ],
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "required": {"type": "boolean"},
+        "execution": {"$ref": "#/$defs/execution"},
+        "implementation": {"$ref": "#/$defs/implementation"},
+        "metric": {"$ref": "#/$defs/metric"},
+        "model": {"$ref": "#/$defs/model"},
+        "mounts": {"$ref": "#/$defs/mounts"},
+        "filtering": {"$ref": "#/$defs/filtering"},
+        "resource_fingerprints": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/nonEmptyString"},
+          "uniqueItems": true
+        }
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {"type": "string", "minLength": 1},
+    "nullablePath": {
+      "oneOf": [
+        {"$ref": "#/$defs/nonEmptyString"},
+        {"type": "null"}
+      ]
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["strategy", "docker_compose", "command"],
+      "properties": {
+        "strategy": {"enum": ["docker_compose", "command"]},
+        "docker_compose": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "docker_executable",
+            "compose_file",
+            "service",
+            "image",
+            "image_digest"
+          ],
+          "properties": {
+            "docker_executable": {"$ref": "#/$defs/nonEmptyString"},
+            "compose_file": {"$ref": "#/$defs/nonEmptyString"},
+            "service": {"$ref": "#/$defs/nonEmptyString"},
+            "image": {"$ref": "#/$defs/nonEmptyString"},
+            "image_digest": {
+              "oneOf": [
+                {"type": "string", "pattern": "^sha256:[a-fA-F0-9]+$"},
+                {"type": "null"}
+              ]
+            }
+          }
+        },
+        "command": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["prefix", "executable", "working_directory"],
+          "properties": {
+            "prefix": {
+              "type": "array",
+              "items": {"$ref": "#/$defs/nonEmptyString"}
+            },
+            "executable": {
+              "oneOf": [
+                {"$ref": "#/$defs/nonEmptyString"},
+                {"type": "null"}
+              ]
+            },
+            "working_directory": {"$ref": "#/$defs/nullablePath"}
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {"strategy": {"const": "command"}},
+            "required": ["strategy"]
+          },
+          "then": {
+            "properties": {
+              "command": {
+                "properties": {
+                  "executable": {"$ref": "#/$defs/nonEmptyString"}
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "implementation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "interface",
+        "entrypoint",
+        "interpreter",
+        "inference_method",
+        "output_variant",
+        "result_suffix",
+        "software_version"
+      ],
+      "properties": {
+        "interface": {"$ref": "#/$defs/nonEmptyString"},
+        "entrypoint": {"$ref": "#/$defs/nonEmptyString"},
+        "interpreter": {"$ref": "#/$defs/nonEmptyString"},
+        "inference_method": {"$ref": "#/$defs/nonEmptyString"},
+        "output_variant": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_.-]*$"
+        },
+        "result_suffix": {
+          "type": "string",
+          "pattern": "^_[A-Za-z0-9_.-]+$"
+        },
+        "software_version": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "metric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "semantics", "ranking_direction", "calibrated"],
+      "properties": {
+        "name": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+        "semantics": {"$ref": "#/$defs/nonEmptyString"},
+        "ranking_direction": {
+          "enum": ["lower_is_better", "higher_is_better", "unknown"]
+        },
+        "calibrated": {"type": "boolean"}
+      }
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "training_split",
+        "pretrained",
+        "model_identifier",
+        "version"
+      ],
+      "properties": {
+        "training_split": {"$ref": "#/$defs/nonEmptyString"},
+        "pretrained": {"type": "boolean"},
+        "model_identifier": {"$ref": "#/$defs/nonEmptyString"},
+        "version": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "mounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "input_directory",
+        "output_directory",
+        "torch_cache",
+        "external_model_data"
+      ],
+      "properties": {
+        "input_directory": {"$ref": "#/$defs/nullablePath"},
+        "output_directory": {"$ref": "#/$defs/nullablePath"},
+        "torch_cache": {"$ref": "#/$defs/nullablePath"},
+        "external_model_data": {"$ref": "#/$defs/nullablePath"}
+      }
+    },
+    "filtering": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maximum_retained_candidates",
+        "threshold",
+        "threshold_comparison",
+        "threshold_status",
+        "allowed_ec_depths",
+        "allow_partial_ec"
+      ],
+      "properties": {
+        "maximum_retained_candidates": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        },
+        "threshold": {"type": ["number", "null"]},
+        "threshold_comparison": {
+          "enum": ["lte", "gte", null]
+        },
+        "threshold_status": {
+          "enum": [
+            "operational",
+            "externally_documented",
+            "empirically_calibrated"
+          ]
+        },
+        "allowed_ec_depths": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {"type": "integer", "minimum": 1, "maximum": 4},
+              "minItems": 1,
+              "uniqueItems": true
+            },
+            {"type": "null"}
+          ]
+        },
+        "allow_partial_ec": {"type": "boolean"}
+      }
+    }
+  }
+}

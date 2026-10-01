@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
+import yaml
 
 from enzynotation.cli import main
 
@@ -117,3 +118,40 @@ def test_domain_or_motif_options_require_family_profile(
     with pytest.raises(SystemExit) as error:
         main(["run", str(source), "--motifs"])
     assert error.value.code == 2
+
+
+def test_run_command_accepts_disabled_clean_provider_without_execution(
+    tmp_path: Path, fasta_file, capsys
+) -> None:
+    source = fasta_file(">q1\nACDEFGHIK\n")
+    clean_document = yaml.safe_load(Path("configs/tools/clean.yaml").read_text())
+    clean_document["clean"]["enabled"] = False
+    clean_config = tmp_path / "clean.yaml"
+    clean_config.write_text(
+        yaml.safe_dump(clean_document, sort_keys=False), encoding="utf-8"
+    )
+
+    status = main(
+        [
+            "run",
+            str(source),
+            "--run-id",
+            "cli-clean-disabled",
+            "--results-dir",
+            str(tmp_path / "results"),
+            "--logs-dir",
+            str(tmp_path / "logs"),
+            "--clean-config",
+            str(clean_config),
+        ]
+    )
+
+    assert status == 0
+    summary = json.loads(
+        (
+            tmp_path
+            / "results/cli-clean-disabled/stages/clean/normalized/clean_summary.json"
+        ).read_text()
+    )
+    assert summary["status"] == "disabled"
+    assert "RUN COMPLETED" in capsys.readouterr().out

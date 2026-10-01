@@ -1,0 +1,55 @@
+schema_version: 1
+clean:
+  enabled: true
+  required: false
+
+  execution:
+    strategy: docker_compose
+    docker_compose:
+      docker_executable: docker
+      compose_file: docker/clean.compose.yml
+      service: clean
+      image: moleculemaker/clean-image-amd64
+      image_digest: null
+    command:
+      prefix: []
+      executable: null
+      working_directory: null
+
+  implementation:
+    interface: CLEAN_infer_fasta
+    entrypoint: /app/CLEAN_infer_fasta.py
+    interpreter: python
+    inference_method: max_separation
+    output_variant: maxsep_gmm_confidence
+    result_suffix: _maxsep.csv
+    software_version: unknown
+
+  metric:
+    name: gmm_confidence_estimate
+    semantics: >-
+      CLEAN GMM-ensemble confidence estimate derived from embedding distance.
+    ranking_direction: higher_is_better
+    calibrated: false
+
+  model:
+    training_split: split100
+    pretrained: true
+    model_identifier: CLEAN-pretrained-split100
+    version: unknown
+
+  mounts:
+    input_directory: null
+    output_directory: null
+    torch_cache: null
+    external_model_data: null
+
+  filtering:
+    maximum_retained_candidates: null
+    threshold: null
+    threshold_comparison: null
+    threshold_status: operational
+    allowed_ec_depths: null
+    allow_partial_ec: true
+
+  resource_fingerprints: []

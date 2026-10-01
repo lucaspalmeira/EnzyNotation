@@ -1,0 +1,47 @@
+schema_version: 1
+clean:
+  enabled: true
+  required: false
+  execution:
+    strategy: docker_compose
+    docker_compose:
+      docker_executable: docker
+      compose_file: docker/clean.compose.yml
+      service: clean
+      image: moleculemaker/clean-image-amd64
+      image_digest: not-a-digest
+    command:
+      prefix: []
+      executable: null
+      working_directory: null
+  implementation:
+    interface: CLEAN_infer_fasta
+    entrypoint: /app/CLEAN_infer_fasta.py
+    interpreter: python
+    inference_method: max_separation
+    output_variant: maxsep_gmm_confidence
+    result_suffix: _maxsep.csv
+    software_version: unknown
+  metric:
+    name: confidence
+    semantics: incorrectly unspecified
+    ranking_direction: maybe_better
+    calibrated: true
+  model:
+    training_split: split100
+    pretrained: true
+    model_identifier: CLEAN
+    version: unknown
+  mounts:
+    input_directory: null
+    output_directory: null
+    torch_cache: null
+    external_model_data: null
+  filtering:
+    maximum_retained_candidates: 0
+    threshold: null
+    threshold_comparison: null
+    threshold_status: validated_somehow
+    allowed_ec_depths: [0, 5]
+    allow_partial_ec: true
+  resource_fingerprints: []

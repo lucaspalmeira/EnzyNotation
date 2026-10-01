@@ -2,6 +2,7 @@
 
 from enzynotation.tools.base import ExternalTool, ToolConfigurationError
 from enzynotation.tools.blast import BlastConfig, BlastTool, load_blast_config
+from enzynotation.tools.clean import CleanConfig, CleanTool, load_clean_config
 from enzynotation.tools.hmmer import HmmerConfig, HmmerTool, load_hmmer_config
 from enzynotation.tools.interpro import (
     InterProConfig,
@@ -12,6 +13,8 @@ from enzynotation.tools.interpro import (
 __all__ = [
     "BlastConfig",
     "BlastTool",
+    "CleanConfig",
+    "CleanTool",
     "ExternalTool",
     "HmmerConfig",
     "HmmerTool",
@@ -19,6 +22,7 @@ __all__ = [
     "InterProTool",
     "ToolConfigurationError",
     "load_blast_config",
+    "load_clean_config",
     "load_hmmer_config",
     "load_interpro_config",
 ]

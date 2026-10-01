@@ -8,11 +8,12 @@ them to a separate integration layer that may produce an EC-number prediction.
 The architecture is family-agnostic: enzyme-family and EC-specific knowledge is
 configuration, not Python control flow.
 
-Milestones 0 through 4 are currently implemented. The local execution core can
-run and resume validation plus opt-in BLASTp, HMMER/InterProScan domain, and
-catalytic-motif evidence stages. Other evidence providers, the integration
-engine, Slurm execution, and final reports described here remain contracts for
-later milestones and are not currently available.
+Milestones 0 through 5 are currently implemented. The local execution core can
+run and resume validation plus opt-in BLASTp, CLEAN, HMMER/InterProScan domain,
+and catalytic-motif evidence stages. Other evidence providers, the integration
+engine, general container packaging, Slurm execution, and final reports
+described here remain contracts for later milestones and are not currently
+available.
 
 ## Architectural boundaries
 
@@ -22,10 +23,12 @@ The pipeline is divided into six layers:
    unique query identifiers.
 2. **Provider layer** invokes tools such as BLASTp, CLEAN, HMMER, InterProScan,
    Foldseek, and TM-align, or evaluates configured catalytic motifs. BLASTp,
-   HMMER, optional InterProScan, and catalytic motifs are currently implemented.
+   CLEAN, HMMER, optional InterProScan, and catalytic motifs are currently
+   implemented.
 3. **Parser layer** preserves raw output and converts provider-specific results
-   into canonical evidence records. BLAST, HMMER domtblout, InterProScan TSV,
-   curated BLAST metadata, and motif normalization are currently implemented.
+   into canonical evidence records. BLAST, CLEAN CSV, HMMER domtblout,
+   InterProScan TSV, curated BLAST metadata, and motif normalization are
+   currently implemented.
 4. **Integration layer** evaluates candidates, correlations, family rules,
    EC-specific rules, conflicts, and confidence. It is the only layer allowed
    to make a final EC prediction.
@@ -177,8 +180,9 @@ Milestone 1 implements built-in defaults followed by `--config` overlays in
 argument order. Milestone 3 adds a separately versioned BLAST provider document
 selected by `--blast-config`. Milestone 4 adds HMMER and InterProScan provider
 documents plus a family profile selected by `--family-config`. Provider and
-family snapshots and digests participate in stage signatures. EC-rule documents
-are not yet loaded.
+family snapshots and digests participate in stage signatures. Milestone 5 adds
+a separately versioned CLEAN provider document selected by `--clean-config`.
+EC-rule documents are not yet loaded.
 
 ## Evidence independence
 

@@ -1,0 +1,53 @@
+schema_version: 1
+clean:
+  enabled: true
+  required: false
+  execution:
+    strategy: command
+    docker_compose:
+      docker_executable: docker
+      compose_file: docker/clean.compose.yml
+      service: clean
+      image: moleculemaker/clean-image-amd64:example-tag
+      image_digest: null
+    command:
+      prefix:
+        - conda
+        - run
+        - -n
+        - clean
+      executable: python
+      working_directory: /opt/CLEAN/app
+  implementation:
+    interface: CLEAN_infer_fasta
+    entrypoint: /opt/CLEAN/app/CLEAN_infer_fasta.py
+    interpreter: python
+    inference_method: max_separation
+    output_variant: maxsep_distance
+    result_suffix: _maxsep.csv
+    software_version: unknown
+  metric:
+    name: cluster_center_pairwise_distance
+    semantics: Pairwise embedding distance to predicted EC cluster center.
+    ranking_direction: lower_is_better
+    calibrated: false
+  model:
+    training_split: custom-split
+    pretrained: true
+    model_identifier: CLEAN-external-model
+    version: unknown
+  mounts:
+    input_directory: /opt/CLEAN/app/data/inputs
+    output_directory: /opt/CLEAN/app/results/inputs
+    torch_cache: null
+    external_model_data: null
+  filtering:
+    maximum_retained_candidates: null
+    threshold: null
+    threshold_comparison: null
+    threshold_status: operational
+    allowed_ec_depths:
+      - 3
+      - 4
+    allow_partial_ec: true
+  resource_fingerprints: []
