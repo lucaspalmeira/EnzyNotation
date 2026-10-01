@@ -1,0 +1,4 @@
+accession	protein_name	ec_numbers	annotation_status	source_database	database_version	curation_status
+P11111	Curated hydrolase	3.2.1.26	reviewed	UniProtKB/Swiss-Prot	2026_03	expert_reviewed
+Q22222	Multifunctional enzyme	1.2.3.4;2.3	curated	CustomCuratedDB	v7	manual
+NP_333	Protein without EC		curated	RefSeq curated	release-225	curated

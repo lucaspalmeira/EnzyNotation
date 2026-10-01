@@ -7,30 +7,47 @@ of evidence rather than assigned from the first BLAST hit.
 
 ## Project status
 
-Milestones 0 through 2 are implemented. The repository currently provides:
+Milestones 0 through 4 are implemented. The repository currently provides:
 
 - an installable Python package and command-line interface;
 - layered YAML configuration;
 - protein FASTA validation and normalization;
 - EC-number parsing and normalization;
 - machine-readable validation reports;
-- versioned JSON Schema contracts for pipeline, family, EC-rule, and evidence
-  documents;
+- versioned JSON Schema contracts for pipeline, BLAST, HMMER, InterProScan,
+  family, EC-rule, and evidence documents;
 - documented architecture and scientific inference policy;
 - a validation-only local workflow with manifests and resumable stage state;
 - content-based input/configuration invalidation and atomic stage completion;
 - command, software-version, checksum, stdout, and stderr provenance;
+- a configurable, resumable BLASTp evidence-provider stage;
+- overlap-safe multiple-HSP aggregation, filtering, and deterministic ranking;
+- explicit curated accession metadata and canonical BLAST evidence JSONL;
+- generic HMMER/Pfam-compatible domain evidence with explicit domain filters;
+- optional complementary InterProScan evidence, including GO and pathway data;
+- versioned family profiles with domain counts and architecture rules;
+- literal and regular-expression catalytic motifs, named residues, positional
+  tolerances, occurrence bounds, ordering, and distance constraints;
+- canonical domain and motif evidence with explicit absence/failure semantics;
 - unit tests and linting configuration.
 
-Evidence collection, evidence integration, EC prediction, confidence
-classification, final annotation reports, containers, and Slurm execution are
-planned but are **not implemented yet**.
+CLEAN and structure evidence providers, evidence integration, final EC
+prediction, confidence classification, final annotation reports, containers,
+and Slurm execution are planned but are **not implemented yet**.
 
 ## Requirements
 
 - Python 3.11 or newer
 - PyYAML 6.0 or newer
 - jsonschema 4.21 or newer
+
+BLAST evidence collection additionally requires NCBI BLAST+ and an external
+protein database. FASTA validation and validation-only runs do not require it.
+
+Domain evidence requires HMMER 3 and an external Pfam-compatible or custom HMM
+library. InterProScan is optional and requires a separately installed external
+distribution and its data. Motif analysis has no external executable
+dependency.
 
 Development checks additionally use pytest, pytest-cov, and Ruff.
 
@@ -85,9 +102,9 @@ Validation currently checks:
 Lowercase sequences are converted to uppercase by default. A single terminal
 `*` is accepted, removed from normalized output, and reported as a warning.
 
-## Local validation workflow
+## Local workflow
 
-Run the Milestone 2 validation workflow with an explicit ID:
+Run the validation-only workflow with an explicit ID:
 
 ```bash
 enzynotation run proteins.fasta --run-id example-run
@@ -144,6 +161,82 @@ normalized FASTA. Interrupted attempts are retried, previous attempt records
 are retained under the stage history directory, and changed FASTA content
 invalidates the completed validation stage.
 
+## BLASTp evidence collection
+
+Configure an external BLAST database and matching curated accession metadata by
+editing `configs/tools/blast.yaml`, then run:
+
+```bash
+enzynotation run proteins.fasta \
+  --run-id blast-example \
+  --blast-config configs/tools/blast.yaml
+```
+
+The database path, metadata path, executable, CPU count, search limits, and all
+post-search filters are configurable. Database files are never embedded in this
+repository. `scripts/setup_blast_database.sh` can build an external protein
+database from a curated FASTA using `makeblastdb`.
+
+BLAST output is preserved under `stages/blast/raw/`; aggregated and filtered
+hits are written under `stages/blast/normalized/`; canonical evidence is
+written to `evidence/blast_evidence.jsonl`. Overlapping HSP coordinate ranges
+are unioned, so query and subject coverage cannot exceed 100%. Unmapped hits
+remain homology evidence and are explicitly marked as lacking functional
+metadata.
+
+EnzyNotation does **not** assign an EC number from the first BLAST hit. BLAST
+rank is only a deterministic inspection order. Sequence homology and an EC
+transferred from curated metadata are separate, correlated evidence records;
+only the future integration layer may make a final EC prediction.
+
+See [docs/blast.md](docs/blast.md) for database preparation, metadata formats,
+configuration, output fields, multiple-HSP aggregation, filtering, provenance,
+failure semantics, and current scientific limitations.
+
+## Domain and motif evidence
+
+Enable HMMER and catalytic motif analysis with a versioned family profile:
+
+```bash
+enzynotation run proteins.fasta \
+  --run-id domain-motif-example \
+  --family-config examples/configs/gh32.example.yaml \
+  --hmmer-config configs/tools/hmmer.yaml \
+  --motifs
+```
+
+InterProScan can be added as an optional or required complementary provider:
+
+```bash
+enzynotation run proteins.fasta \
+  --run-id domain-motif-example \
+  --family-config examples/configs/gh32.example.yaml \
+  --hmmer-config configs/tools/hmmer.yaml \
+  --interpro-config configs/tools/interpro.yaml \
+  --motifs
+```
+
+External executable/database paths, CPU counts, search limits, and filters live
+in `configs/tools/hmmer.yaml` and `configs/tools/interpro.yaml`. Family-specific
+domain accessions, architecture, motifs, residue constraints, expected
+positions, and ordering rules live in the family YAML. The external HMM and
+InterPro databases are never added to the repository or run directory.
+
+Domain outputs are stored under `stages/domains/{raw,normalized}/` with
+canonical records at `evidence/domain_evidence.jsonl`. Motif outputs use
+`stages/motifs/{raw,normalized}/` and `evidence/motif_evidence.jsonl`. Both
+stages use the existing provenance, logging, resumability, and content-change
+invalidation system.
+
+HMMER and InterPro hits derived from the same signature are correlated domain
+evidence, not independent confirmations. Motif evidence is separately
+traceable. Neither domains nor motifs independently establish a fine-grained
+EC assignment, and these stages never produce a final EC prediction.
+
+See [docs/domains-and-motifs.md](docs/domains-and-motifs.md) for configuration,
+motif syntax, coverage definitions, outputs, failure states, limitations, and
+instructions for adding enzyme-family profiles.
+
 ## Configuration
 
 Built-in defaults are mirrored in `configs/default.yaml`. One or more YAML
@@ -177,11 +270,15 @@ logging:
   level: INFO
 ```
 
-The versioned contracts for future pipeline, family, EC-rule, and evidence
-documents are in `configs/schema/`, with valid examples in `examples/configs/`.
+The versioned contracts for pipeline, BLAST, HMMER, InterProScan, family,
+EC-rule, and evidence documents are in `configs/schema/`, with valid examples
+in `examples/configs/`.
 The current configuration loader validates the Milestone 1 fields shown above,
-and the local runner additionally honors `pipeline.run_id` when present. It does
-not yet load family or EC-rule documents or run evidence providers.
+and the local runner additionally honors `pipeline.run_id` when present. The
+BLAST provider loads its separate versioned YAML document when
+`--blast-config` is supplied. Domain/motif workflows load a family document with
+`--family-config` plus the selected tool documents. EC-rule documents are not
+yet loaded.
 
 Configuration precedence is deterministic: built-in defaults are followed by
 site/project overlays in supplied order, and a later value overrides an earlier
@@ -225,25 +322,25 @@ ruff format --check src tests
 ## Repository structure
 
 ```text
-configs/             Defaults and JSON Schema contracts
-docs/                Architecture, data contracts, and scientific policy
-examples/configs/    Valid contract examples for future milestones
-src/enzynotation/    Python package, stages, and local execution backend
-tests/               Unit, CLI, and schema tests
+configs/             Defaults, tool configurations, and JSON Schema contracts
+docs/                Architecture, provider docs, contracts, and policy
+examples/configs/    Valid contract and implemented family examples
+scripts/             External database setup helpers
+src/enzynotation/    Python package, parsers, stages, tools, and local backend
+tests/               Unit, integration, CLI, fixture, and schema tests
 ```
 
 The workflow creates `results/` and `logs/` when run. Later milestones will add
-`scripts/`, `slurm/`, `docker/`, `data/`, and `databases/` as required. Large
-biological databases will not be stored in the repository or embedded in
-container images.
+`slurm/`, `docker/`, `data/`, and `databases/` as required. Large biological
+databases will not be stored in the repository or embedded in container images.
 
 ## Planned pipeline
 
-Later milestones will add independent adapters for BLASTp, CLEAN,
-HMMER/Pfam or InterProScan, catalytic motifs, Foldseek, and TM-align. Their raw
-results will be preserved and normalized before a separate inference layer
-evaluates candidate EC numbers, conflicting evidence, and transparent
-confidence categories (`high`, `medium`, `low`, and `unresolved`).
+Later milestones will add independent adapters for CLEAN, Foldseek, and
+TM-align. Their raw results will join the implemented BLAST, domain, and motif
+evidence before a separate inference layer evaluates candidate EC numbers,
+conflicting evidence, and transparent confidence categories (`high`, `medium`,
+`low`, and `unresolved`).
 
 Docker will support local development. Apptainer/Singularity and dependency-
 aware Slurm jobs will support cluster execution. Until those milestones are
@@ -270,11 +367,15 @@ See:
 - `docs/data-contracts.md` for canonical identifiers, evidence, EC candidates,
   provenance, conflicts, family rules, and EC rules;
 - `docs/scientific-policy.md` for non-negotiable inference and confidence
-  policies.
+  policies;
+- `docs/domains-and-motifs.md` for the implemented Milestone 4 providers and
+  family-profile syntax.
 
-The schemas are contracts for upcoming implementations. Their presence does not
-make BLASTp, CLEAN, domain, motif, structure, integration, reporting, container,
-or Slurm commands available yet.
+The family schema is consumed by implemented domain and motif stages. EC
+integration, confidence, and reporting schemas remain contracts for upcoming
+implementations. BLASTp, HMMER/InterProScan domain evidence, and catalytic motif
+analysis are available; CLEAN, structure, integration, reporting, container,
+and Slurm commands are not.
 
 ## Scientific and architectural policy
 

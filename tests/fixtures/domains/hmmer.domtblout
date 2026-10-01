@@ -1,0 +1,7 @@
+# hmmscan :: search sequence(s) against a profile database
+# target name accession tlen query name accession qlen ...
+Glyco_hydro_32N PF00251.20 300 q1 - 500 1e-50 180.0 0.0 1 2 1e-45 1e-44 170.0 0.0 1 290 20 300 15 305 0.98 GH32 N-terminal catalytic domain
+Glyco_hydro_32N PF00251.20 300 q1 - 500 1e-20 90.0 0.0 2 2 1e-18 1e-17 85.0 0.0 10 150 320 450 315 455 0.90 repeated GH32 N-terminal domain
+Glyco_hydro_32C PF08244.12 150 q1 - 500 1e-30 120.0 0.0 1 1 1e-27 1e-26 110.0 0.0 1 145 340 485 335 490 0.95 GH32 C-terminal domain
+Example_domain PF99999.1 100 q2 - 200 2e-6 35.0 0.1 1 1 3e-5 4e-5 30.0 0.0 5 95 50 140 45 145 0.80 example domain
+# [ok]

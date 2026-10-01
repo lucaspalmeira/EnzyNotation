@@ -409,7 +409,7 @@ class PipelineRunner:
                     configuration_checksum=stage_config_checksum,
                     dependency_signatures=dependency_signatures,
                 )
-            except (OSError, ValueError, TypeError) as exc:
+            except (OSError, ValueError, TypeError, EnzyNotationError) as exc:
                 stage_paths = paths.for_stage(stage.stage_id)
                 store = StageStateStore(stage_paths)
                 attempt = store.next_attempt()

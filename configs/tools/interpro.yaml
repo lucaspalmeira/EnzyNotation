@@ -1,0 +1,15 @@
+schema_version: 1
+interproscan:
+  enabled: false
+  required: false
+  executable: interproscan.sh
+  database:
+    name: InterPro
+    version: unknown
+    path: null
+  execution:
+    cpus: 1
+    applications:
+      - Pfam
+    include_go_terms: true
+    include_pathways: true

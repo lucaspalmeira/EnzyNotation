@@ -99,7 +99,15 @@ class LocalBackend(ExecutionBackend):
                 timeout=30,
             )
             output = completed.stdout.strip() or completed.stderr.strip()
-            version = output.splitlines()[0].strip() if output else "unknown"
+            lines = [line.strip() for line in output.splitlines() if line.strip()]
+            version = next(
+                (
+                    line
+                    for line in lines
+                    if any(character.isdigit() for character in line)
+                ),
+                lines[0] if lines else "unknown",
+            )
             return_code = completed.returncode
         except (OSError, subprocess.SubprocessError):
             version = "unknown"

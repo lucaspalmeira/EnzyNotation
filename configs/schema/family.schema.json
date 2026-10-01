@@ -47,6 +47,9 @@
         }
       }
     },
+    "sequence_analysis": {
+      "$ref": "#/$defs/sequenceAnalysis"
+    },
     "rules": {
       "type": "object",
       "additionalProperties": false,
@@ -62,6 +65,12 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/motifRule"
+          }
+        },
+        "motif_relationships": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/motifRelationship"
           }
         },
         "structures": {
@@ -126,7 +135,7 @@
       ]
     },
     "requirement": {
-      "enum": ["required", "supporting", "forbidden"]
+      "enum": ["required", "expected", "supporting", "optional", "forbidden"]
     },
     "candidateECs": {
       "type": "array",
@@ -186,6 +195,10 @@
         "maximum_evalue": {
           "type": "number",
           "exclusiveMinimum": 0
+        },
+        "architecture_order": {
+          "type": "integer",
+          "minimum": 1
         },
         "candidate_ecs": {
           "$ref": "#/$defs/candidateECs"
@@ -249,8 +262,16 @@
         },
         "pattern": {
           "type": "string",
-          "format": "regex",
           "minLength": 1
+        },
+        "pattern_type": {
+          "enum": ["literal", "regex"]
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "overlapping": {
+          "type": "boolean"
         },
         "requirement": {
           "$ref": "#/$defs/requirement"
@@ -273,8 +294,120 @@
         "position": {
           "$ref": "#/$defs/positionConstraint"
         },
+        "coordinates": {
+          "$ref": "#/$defs/coordinateConstraint"
+        },
+        "catalytic_residues": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/catalyticResidue"
+          }
+        },
         "candidate_ecs": {
           "$ref": "#/$defs/candidateECs"
+        }
+      }
+    },
+    "sequenceAnalysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "region_start": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "region_end": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        },
+        "minimum_complete_length": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        },
+        "maximum_complete_length": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        }
+      }
+    },
+    "coordinateConstraint": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "minimum_start": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        },
+        "maximum_start": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        },
+        "minimum_end": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        },
+        "maximum_end": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        }
+      }
+    },
+    "catalyticResidue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "motif_offset", "allowed_residues"],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/stableIdentifier"
+        },
+        "motif_offset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "allowed_residues": {
+          "type": "string",
+          "pattern": "^[A-Za-z]+$",
+          "minLength": 1
+        },
+        "expected_position": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        },
+        "tolerance": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "motifRelationship": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "relationship_id",
+        "upstream_motif",
+        "downstream_motif",
+        "requirement"
+      ],
+      "properties": {
+        "relationship_id": {
+          "$ref": "#/$defs/stableIdentifier"
+        },
+        "upstream_motif": {
+          "$ref": "#/$defs/stableIdentifier"
+        },
+        "downstream_motif": {
+          "$ref": "#/$defs/stableIdentifier"
+        },
+        "requirement": {
+          "$ref": "#/$defs/requirement"
+        },
+        "minimum_distance": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "maximum_distance": {
+          "type": ["integer", "null"],
+          "minimum": 0
         }
       }
     },

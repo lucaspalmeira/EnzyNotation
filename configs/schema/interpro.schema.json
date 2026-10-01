@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enzynotation.org/schema/v1/interpro.schema.json",
+  "title": "EnzyNotation InterProScan provider configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "interproscan"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "interproscan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "required", "executable", "database", "execution"],
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "required": {"type": "boolean"},
+        "executable": {"$ref": "#/$defs/nonEmptyString"},
+        "database": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "version", "path"],
+          "properties": {
+            "name": {"$ref": "#/$defs/nonEmptyString"},
+            "version": {"$ref": "#/$defs/nonEmptyString"},
+            "path": {
+              "oneOf": [
+                {"$ref": "#/$defs/nonEmptyString"},
+                {"type": "null"}
+              ]
+            }
+          }
+        },
+        "execution": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cpus", "applications", "include_go_terms", "include_pathways"
+          ],
+          "properties": {
+            "cpus": {"type": "integer", "minimum": 1},
+            "applications": {
+              "type": "array",
+              "items": {"$ref": "#/$defs/nonEmptyString"},
+              "uniqueItems": true
+            },
+            "include_go_terms": {"type": "boolean"},
+            "include_pathways": {"type": "boolean"}
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {"type": "string", "minLength": 1}
+  }
+}

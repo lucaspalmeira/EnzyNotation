@@ -1,0 +1,87 @@
+schema_version: 1
+family:
+  id: fixture_family
+  name: Fixture enzyme family
+  version: 1.0.0
+sequence_analysis:
+  region_start: 1
+  region_end: null
+  minimum_complete_length: 20
+  maximum_complete_length: null
+rules:
+  domains:
+    - rule_id: catalytic_domain
+      source: pfam
+      signature_id: PF00251
+      requirement: required
+      min_count: 1
+      max_count: 2
+      minimum_query_coverage: 0.1
+      maximum_evalue: 1.0e-5
+      architecture_order: 1
+    - rule_id: terminal_domain
+      source: pfam
+      signature_id: PF08244
+      requirement: expected
+      min_count: 1
+      max_count: 1
+      minimum_query_coverage: 0.1
+      maximum_evalue: 1.0e-5
+      architecture_order: 2
+    - rule_id: forbidden_interpro_domain
+      source: interproscan
+      signature_id: IPR999999
+      requirement: forbidden
+      min_count: 0
+      max_count: 0
+      minimum_query_coverage: 0.0
+  motifs:
+    - rule_id: literal_catalytic
+      description: Required literal motif
+      pattern_type: literal
+      pattern: CAT
+      requirement: required
+      min_occurrences: 1
+      max_occurrences: 2
+      overlapping: true
+      coordinates:
+        minimum_start: 1
+        maximum_start: 20
+      catalytic_residues:
+        - name: catalytic_cysteine
+          motif_offset: 0
+          allowed_residues: C
+          expected_position: 4
+          tolerance: 3
+    - rule_id: regex_region
+      description: Regex motif with amino-acid alternatives
+      pattern_type: regex
+      pattern: "N[DE]P"
+      requirement: expected
+      min_occurrences: 1
+      max_occurrences: null
+      overlapping: false
+    - rule_id: forbidden_region
+      description: Forbidden motif
+      pattern_type: literal
+      pattern: BAD
+      requirement: forbidden
+      min_occurrences: 0
+      max_occurrences: 0
+      overlapping: false
+    - rule_id: optional_region
+      description: Optional motif
+      pattern_type: literal
+      pattern: OPT
+      requirement: optional
+      min_occurrences: 0
+      max_occurrences: null
+      overlapping: false
+  motif_relationships:
+    - relationship_id: literal_before_regex
+      upstream_motif: literal_catalytic
+      downstream_motif: regex_region
+      requirement: required
+      minimum_distance: 0
+      maximum_distance: 20
+  structures: []

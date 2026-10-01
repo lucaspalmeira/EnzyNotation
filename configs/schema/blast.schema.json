@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enzynotation.org/schema/v1/blast.schema.json",
+  "title": "EnzyNotation BLASTp provider configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "blast"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "blast": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required",
+        "thresholds_validated",
+        "executable",
+        "database",
+        "metadata",
+        "execution",
+        "filters"
+      ],
+      "properties": {
+        "required": {"type": "boolean"},
+        "thresholds_validated": {"type": "boolean"},
+        "executable": {"$ref": "#/$defs/nonEmptyString"},
+        "database": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "name", "version"],
+          "properties": {
+            "path": {"$ref": "#/$defs/nonEmptyString"},
+            "name": {"$ref": "#/$defs/nonEmptyString"},
+            "version": {"$ref": "#/$defs/nonEmptyString"}
+          }
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path"],
+          "properties": {
+            "path": {"$ref": "#/$defs/nonEmptyString"}
+          }
+        },
+        "execution": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cpus", "evalue", "max_target_sequences"],
+          "properties": {
+            "cpus": {"type": "integer", "minimum": 1},
+            "evalue": {"type": "number", "minimum": 0},
+            "max_target_sequences": {"type": "integer", "minimum": 1}
+          }
+        },
+        "filters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "maximum_evalue",
+            "minimum_query_coverage",
+            "minimum_subject_coverage",
+            "minimum_percent_identity",
+            "minimum_aligned_length",
+            "maximum_retained_hits_per_query"
+          ],
+          "properties": {
+            "maximum_evalue": {"type": "number", "minimum": 0},
+            "minimum_query_coverage": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "minimum_subject_coverage": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "minimum_percent_identity": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "minimum_aligned_length": {"type": "integer", "minimum": 1},
+            "maximum_retained_hits_per_query": {
+              "type": ["integer", "null"],
+              "minimum": 1
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

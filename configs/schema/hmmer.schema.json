@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enzynotation.org/schema/v1/hmmer.schema.json",
+  "title": "EnzyNotation HMMER provider configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "hmmer"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "hmmer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled", "required", "executable", "database", "execution", "filters"
+      ],
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "required": {"type": "boolean"},
+        "executable": {"$ref": "#/$defs/nonEmptyString"},
+        "database": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "name", "version", "kind"],
+          "properties": {
+            "path": {"$ref": "#/$defs/nonEmptyString"},
+            "name": {"$ref": "#/$defs/nonEmptyString"},
+            "version": {"$ref": "#/$defs/nonEmptyString"},
+            "kind": {"enum": ["pfam", "custom"]}
+          }
+        },
+        "execution": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cpus", "sequence_evalue", "domain_evalue"],
+          "properties": {
+            "cpus": {"type": "integer", "minimum": 1},
+            "sequence_evalue": {"type": "number", "minimum": 0},
+            "domain_evalue": {"type": "number", "minimum": 0}
+          }
+        },
+        "filters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "maximum_sequence_evalue",
+            "maximum_domain_i_evalue",
+            "minimum_bit_score",
+            "minimum_query_coverage"
+          ],
+          "properties": {
+            "maximum_sequence_evalue": {"type": "number", "minimum": 0},
+            "maximum_domain_i_evalue": {"type": "number", "minimum": 0},
+            "minimum_bit_score": {"type": "number", "minimum": 0},
+            "minimum_query_coverage": {
+              "type": "number", "minimum": 0, "maximum": 1
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {"type": "string", "minLength": 1}
+  }
+}

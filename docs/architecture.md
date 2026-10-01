@@ -8,10 +8,11 @@ them to a separate integration layer that may produce an EC-number prediction.
 The architecture is family-agnostic: enzyme-family and EC-specific knowledge is
 configuration, not Python control flow.
 
-Milestones 0 through 2 are currently implemented. The local execution core can
-run and resume the validation stage. Evidence providers, the integration
+Milestones 0 through 4 are currently implemented. The local execution core can
+run and resume validation plus opt-in BLASTp, HMMER/InterProScan domain, and
+catalytic-motif evidence stages. Other evidence providers, the integration
 engine, Slurm execution, and final reports described here remain contracts for
-later milestones and are not currently available commands.
+later milestones and are not currently available.
 
 ## Architectural boundaries
 
@@ -20,9 +21,11 @@ The pipeline is divided into six layers:
 1. **Input layer** validates FASTA, creates normalized sequences, and establishes
    unique query identifiers.
 2. **Provider layer** invokes tools such as BLASTp, CLEAN, HMMER, InterProScan,
-   Foldseek, and TM-align, or evaluates configured catalytic motifs.
+   Foldseek, and TM-align, or evaluates configured catalytic motifs. BLASTp,
+   HMMER, optional InterProScan, and catalytic motifs are currently implemented.
 3. **Parser layer** preserves raw output and converts provider-specific results
-   into canonical evidence records.
+   into canonical evidence records. BLAST, HMMER domtblout, InterProScan TSV,
+   curated BLAST metadata, and motif normalization are currently implemented.
 4. **Integration layer** evaluates candidates, correlations, family rules,
    EC-specific rules, conflicts, and confidence. It is the only layer allowed
    to make a final EC prediction.
@@ -81,8 +84,7 @@ lowercase SHA-256 digest and normalized length.
 
 A stage receives resolved configuration plus paths to immutable upstream
 artifacts. It writes into its own stage directory and publishes a status record
-only after all declared outputs are complete. A stage status will eventually
-record:
+only after all declared outputs are complete. Current stage status records:
 
 - stage identifier and implementation version;
 - input and configuration digests;
@@ -171,8 +173,12 @@ documents referenced by the pipeline configuration. They do not silently
 override pipeline keys. Duplicate family IDs, rule IDs, or conflicting rule-set
 versions are configuration errors.
 
-Milestone 1 currently implements built-in defaults followed by `--config`
-overlays in argument order. It does not yet load family or EC-rule documents.
+Milestone 1 implements built-in defaults followed by `--config` overlays in
+argument order. Milestone 3 adds a separately versioned BLAST provider document
+selected by `--blast-config`. Milestone 4 adds HMMER and InterProScan provider
+documents plus a family profile selected by `--family-config`. Provider and
+family snapshots and digests participate in stage signatures. EC-rule documents
+are not yet loaded.
 
 ## Evidence independence
 

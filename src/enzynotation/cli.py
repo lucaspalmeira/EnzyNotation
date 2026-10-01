@@ -11,6 +11,7 @@ from pathlib import Path
 from enzynotation import __version__
 from enzynotation.config import load_config
 from enzynotation.exceptions import EnzyNotationError
+from enzynotation.family import load_family_profile
 from enzynotation.fasta import (
     FastaValidationOptions,
     validate_fasta,
@@ -18,7 +19,15 @@ from enzynotation.fasta import (
 )
 from enzynotation.logging_utils import configure_logging
 from enzynotation.runner import PipelineRunner
+from enzynotation.stages.blast import BlastStage
+from enzynotation.stages.domains import DomainsStage
+from enzynotation.stages.motifs import MotifsStage
+from enzynotation.stages.validate import ValidationStage
 from enzynotation.state import RunStatus
+from enzynotation.tools.blast import load_blast_config
+from enzynotation.tools.hmmer import load_hmmer_config
+from enzynotation.tools.interpro import load_interpro_config
+from enzynotation.workflow import Workflow
 
 LOGGER = logging.getLogger(__name__)
 
@@ -50,7 +59,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     validate.add_argument("--report", type=Path, help="write a JSON validation report")
 
-    run = subparsers.add_parser("run", help="run the local validation-only workflow")
+    run = subparsers.add_parser(
+        "run",
+        help="run validation with optional sequence, domain, and motif evidence",
+    )
     run.add_argument("input", type=Path, help="input protein FASTA")
     run.add_argument(
         "--config",
@@ -77,6 +89,35 @@ def build_parser() -> argparse.ArgumentParser:
         "--no-resume",
         action="store_true",
         help="fail if the selected run already exists",
+    )
+    run.add_argument(
+        "--blast-config",
+        type=Path,
+        metavar="PATH",
+        help="enable the BLASTp evidence stage with this YAML configuration",
+    )
+    run.add_argument(
+        "--family-config",
+        type=Path,
+        metavar="PATH",
+        help="family profile used by domain and motif evidence stages",
+    )
+    run.add_argument(
+        "--hmmer-config",
+        type=Path,
+        metavar="PATH",
+        help="enable HMMER domain evidence with this YAML configuration",
+    )
+    run.add_argument(
+        "--interpro-config",
+        type=Path,
+        metavar="PATH",
+        help="configure optional InterProScan domain evidence",
+    )
+    run.add_argument(
+        "--motifs",
+        action="store_true",
+        help="enable catalytic motif analysis from the family profile",
     )
     return parser
 
@@ -142,8 +183,45 @@ def _run_pipeline(args: argparse.Namespace) -> int:
         results_root=args.results_dir,
         logs_root=args.logs_dir,
     )
+    stages = [ValidationStage()]
+    if args.blast_config is not None:
+        blast_config = load_blast_config(args.blast_config)
+        stages.append(BlastStage(blast_config))
+    domain_requested = args.hmmer_config is not None or args.interpro_config is not None
+    family_requested = domain_requested or args.motifs
+    if family_requested and args.family_config is None:
+        raise EnzyNotationError(
+            "--family-config is required with domain or motif evidence"
+        )
+    if args.family_config is not None and not family_requested:
+        raise EnzyNotationError(
+            "--family-config requires --hmmer-config, --interpro-config, or --motifs"
+        )
+    profile = (
+        load_family_profile(args.family_config)
+        if args.family_config is not None
+        else None
+    )
+    if domain_requested:
+        assert profile is not None
+        hmmer = (
+            load_hmmer_config(args.hmmer_config)
+            if args.hmmer_config is not None
+            else None
+        )
+        interpro = (
+            load_interpro_config(args.interpro_config)
+            if args.interpro_config is not None
+            else None
+        )
+        stages.append(DomainsStage(profile, hmmer=hmmer, interpro=interpro))
+    if args.motifs:
+        assert profile is not None
+        stages.append(MotifsStage(profile))
+    workflow = Workflow(stages) if len(stages) > 1 else None
     result = runner.run(
         args.input,
+        workflow=workflow,
         run_id=args.run_id,
         resume=not args.no_resume,
     )

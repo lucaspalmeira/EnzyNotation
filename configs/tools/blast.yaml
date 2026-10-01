@@ -1,0 +1,22 @@
+schema_version: 1
+blast:
+  required: true
+  thresholds_validated: false
+  executable: blastp
+  database:
+    path: /path/to/external/blast/curated_proteins
+    name: curated_proteins
+    version: unknown
+  metadata:
+    path: /path/to/external/curated_proteins.tsv
+  execution:
+    cpus: 1
+    evalue: 10.0
+    max_target_sequences: 500
+  filters:
+    maximum_evalue: 10.0
+    minimum_query_coverage: 0.0
+    minimum_subject_coverage: 0.0
+    minimum_percent_identity: 0.0
+    minimum_aligned_length: 1
+    maximum_retained_hits_per_query: null

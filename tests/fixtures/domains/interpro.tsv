@@ -1,0 +1,4 @@
+q1	0123456789abcdef0123456789abcdef	500	Pfam	PF00251	GH32 N-terminal domain	20	300	1.0E-50	T	30-09-2026	IPR001362	Glycoside hydrolase family 32	GO:0004553|GO:0016798	Reactome:R-HSA-000001
+q1	0123456789abcdef0123456789abcdef	500	Pfam	PF00251	GH32 N-terminal domain	320	450	1.0E-20	T	30-09-2026	IPR001362	Glycoside hydrolase family 32	-	-
+q1	0123456789abcdef0123456789abcdef	500	Pfam	PF08244	GH32 C-terminal domain	340	485	-	T	30-09-2026	IPR013189	GH32 C-terminal domain	GO:0005975	MetaCyc:PWY-0001
+q2	fedcba9876543210fedcba9876543210	200	CDD	cd00001	Example signature	50	140	42.0	T	30-09-2026	-	-	-	-

@@ -1,0 +1,19 @@
+schema_version: 1
+hmmer:
+  enabled: true
+  required: true
+  executable: hmmscan
+  database:
+    path: /path/to/external/Pfam-A.hmm
+    name: Pfam-A
+    version: unknown
+    kind: pfam
+  execution:
+    cpus: 1
+    sequence_evalue: 10.0
+    domain_evalue: 10.0
+  filters:
+    maximum_sequence_evalue: 10.0
+    maximum_domain_i_evalue: 10.0
+    minimum_bit_score: 0.0
+    minimum_query_coverage: 0.0

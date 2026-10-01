@@ -1,0 +1,103 @@
+schema_version: 1
+
+family:
+  id: gh32_example
+  name: Glycoside hydrolase family 32 example
+  version: 1.0.0-example
+  description: >-
+    Illustrative, uncalibrated GH32 compatibility profile. Domain and motif
+    matches do not distinguish invertase, endo-inulinase, exo-inulinase, or
+    levanase and do not establish a specific EC number.
+  references:
+    - https://doi.org/10.1111/febs.13536
+    - https://doi.org/10.1074/jbc.M110.113027
+    - https://doi.org/10.1128/AEM.05032-11
+
+sequence_analysis:
+  region_start: 1
+  region_end: null
+  minimum_complete_length: 250
+  maximum_complete_length: null
+
+rules:
+  domains:
+    - rule_id: gh32_n_terminal_catalytic_domain
+      description: Pfam GH32 N-terminal catalytic beta-propeller domain
+      source: pfam
+      signature_id: PF00251
+      requirement: required
+      min_count: 1
+      max_count: 1
+      minimum_query_coverage: 0.15
+      maximum_evalue: 1.0e-5
+      architecture_order: 1
+    - rule_id: gh32_c_terminal_domain
+      description: Pfam GH32 C-terminal beta-sandwich domain
+      source: pfam
+      signature_id: PF08244
+      requirement: expected
+      min_count: 1
+      max_count: 1
+      minimum_query_coverage: 0.08
+      maximum_evalue: 1.0e-5
+      architecture_order: 2
+
+  motifs:
+    - rule_id: gh32_nucleophile_region
+      description: GH32 nucleophile-containing [WF]MNDPNG region
+      pattern_type: regex
+      pattern: "[WF]MNDPNG"
+      requirement: required
+      min_occurrences: 1
+      max_occurrences: 1
+      overlapping: false
+      catalytic_residues:
+        - name: nucleophile_aspartate
+          motif_offset: 3
+          allowed_residues: D
+          expected_position: null
+          tolerance: 0
+    - rule_id: gh32_rdp_region
+      description: GH32 transition-state-stabilizer RDP region
+      pattern_type: literal
+      pattern: RDP
+      requirement: required
+      min_occurrences: 1
+      max_occurrences: 1
+      overlapping: false
+      catalytic_residues:
+        - name: stabilizer_aspartate
+          motif_offset: 1
+          allowed_residues: D
+          expected_position: null
+          tolerance: 0
+    - rule_id: gh32_acid_base_region
+      description: GH32 acid/base glutamate-containing EC region
+      pattern_type: literal
+      pattern: EC
+      requirement: required
+      min_occurrences: 1
+      max_occurrences: 1
+      overlapping: false
+      catalytic_residues:
+        - name: acid_base_glutamate
+          motif_offset: 0
+          allowed_residues: E
+          expected_position: null
+          tolerance: 0
+
+  motif_relationships:
+    - relationship_id: nucleophile_before_rdp
+      upstream_motif: gh32_nucleophile_region
+      downstream_motif: gh32_rdp_region
+      requirement: required
+      minimum_distance: null
+      maximum_distance: null
+    - relationship_id: rdp_before_acid_base
+      upstream_motif: gh32_rdp_region
+      downstream_motif: gh32_acid_base_region
+      requirement: required
+      minimum_distance: null
+      maximum_distance: null
+
+  structures: []
