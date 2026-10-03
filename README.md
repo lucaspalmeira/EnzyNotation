@@ -7,7 +7,7 @@ of evidence rather than assigned from the first BLAST hit.
 
 ## Project status
 
-Milestones 0 through 7 are implemented. The repository currently provides:
+Milestones 0 through 8 are implemented. The repository currently provides:
 
 - an installable Python package and command-line interface;
 - layered YAML configuration;
@@ -41,10 +41,13 @@ Milestones 0 through 7 are implemented. The repository currently provides:
 - declarative family/EC constraints, typed conflicts, and EC hierarchy fallback;
 - transparent candidate scorecards and heuristic categorical confidence;
 - compact per-query final annotations, including partial and unresolved results;
+- deterministic final TSV and schema-validated JSON reports;
+- a self-contained static HTML report with conflicts, correlation, provider
+  availability, rule traces, and provenance;
 - unit tests and linting configuration.
 
-Polished TSV/HTML reports, general containers, Slurm execution, benchmark
-calibration, and structure prediction are **not implemented yet**.
+General containers, Slurm execution, benchmark calibration, and structure
+prediction are **not implemented yet**.
 
 ## Requirements
 
@@ -363,6 +366,36 @@ See [docs/evidence-integration.md](docs/evidence-integration.md) for provider
 roles, hierarchy, tie handling, conflicts, confidence, provenance, caching,
 outputs, and worked synthetic examples.
 
+## Final reports
+
+Generate final reports after integration:
+
+```bash
+enzynotation run proteins.fasta \
+  --run-id reported-example \
+  --integration-config configs/integration/default.yaml \
+  --report
+```
+
+Use `--report-config configs/report/default.yaml` to select a
+presentation-only configuration explicitly. The report stage writes stable TSV
+tables, `report.json`, `run_summary.json`, and a self-contained `report.html`
+under `results/<run_id>/reports/`. It depends on integration and participates in
+the normal stage cache. A report configuration or template change reruns only
+reporting when upstream outputs remain intact.
+
+The tables preserve exact, partial, and unresolved outcomes, candidate status,
+explicit conflicts, rule evaluations, provider availability, evidence IDs and
+correlation groups. Provider failures remain distinct from biological
+contradictions. Canonical evidence JSONL and raw provider artifacts remain the
+source of truth and are referenced rather than copied into the report.
+
+EnzyNotation confidence categories are heuristic and are not calibrated
+probabilities. Final reporting does not perform EC inference; it displays
+decisions produced by the integration layer. See
+[docs/reporting.md](docs/reporting.md) for file schemas, serialization rules,
+HTML safety, provenance, cache invalidation, and interpretation limits.
+
 ## Configuration
 
 Built-in defaults are mirrored in `configs/default.yaml`. One or more YAML
@@ -397,8 +430,9 @@ logging:
 ```
 
 The versioned contracts for pipeline, BLAST, CLEAN, HMMER, InterProScan,
-structures, Foldseek, TM-align, family, EC-rule, evidence, integration, and
-confidence documents are in `configs/schema/`, with valid examples in
+structures, Foldseek, TM-align, family, EC-rule, evidence, integration,
+confidence, report configuration, and final report documents are in
+`configs/schema/`, with valid examples in
 `examples/configs/`.
 The current configuration loader validates the Milestone 1 fields shown above,
 and the local runner additionally honors `pipeline.run_id` when present. BLAST
@@ -469,7 +503,8 @@ stored in the repository or embedded in EnzyNotation container images.
 The implemented integration layer evaluates canonical BLAST, CLEAN, domain,
 motif, Foldseek, and TM-align evidence into EC candidates, conflicts, and
 transparent confidence categories (`high`, `medium`, `low`, and `unresolved`).
-Milestone 8 will add the polished report suite without changing these decisions.
+The report layer deterministically presents those decisions as TSV, JSON, and
+static HTML without changing them.
 
 General Docker packaging will support local development. Apptainer/Singularity
 and dependency-aware Slurm jobs will support cluster execution. Until those
@@ -505,12 +540,15 @@ See:
   Foldseek, TM-align, and correlation semantics;
 - `docs/evidence-integration.md` for implemented candidate integration,
   declarative rules, conflicts, categorical confidence, and final annotations.
+- `docs/reporting.md` for final TSV/JSON/HTML artifacts, deterministic
+  serialization, provenance, and report interpretation.
 
 The family schema is consumed by domain, motif, and integration stages. EC
 rules, integration policy, and confidence schemas are active contracts.
 BLASTp, CLEAN, HMMER/InterProScan domains, catalytic motifs, supplied
 structures, Foldseek, selective TM-align, and integration are available;
-polished reporting, general container, and Slurm commands are not.
+final reporting is available, while general container and Slurm commands are
+not.
 
 ## Scientific and architectural policy
 

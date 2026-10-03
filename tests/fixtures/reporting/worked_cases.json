@@ -1,0 +1,132 @@
+{
+  "generated_at": "2026-01-02T03:04:05Z",
+  "annotations": [
+    {
+      "query_id": "q_exact_high",
+      "predicted_ec": "1.1.1.1",
+      "ec_completeness": "complete",
+      "ec_depth": 4,
+      "confidence": "high",
+      "alternative_candidates": [],
+      "major_conflicts": [],
+      "supporting_evidence_ids": ["ev:high:blast", "ev:high:clean", "ev:high:structure"],
+      "independent_evidence_classes": ["curated_annotation", "learned_sequence_model", "structure_homology"],
+      "provider_availability": [
+        {"source_id": "blastp", "state": "successful", "required": false, "roles": ["candidate_source"]},
+        {"source_id": "clean", "state": "successful", "required": false, "roles": ["candidate_source"]},
+        {"source_id": "foldseek", "state": "successful", "required": false, "roles": ["candidate_source"]}
+      ],
+      "policy": {"id": "fixture-policy", "version": "1"},
+      "rule_evaluation_ids": [],
+      "reason_codes": ["most_specific_supported_candidate"]
+    },
+    {
+      "query_id": "q_exact_lower",
+      "predicted_ec": "2.7.1.1",
+      "ec_completeness": "complete",
+      "ec_depth": 4,
+      "confidence": "medium",
+      "alternative_candidates": [{"candidate_ec": "2.7.1.-", "status": "eligible"}],
+      "major_conflicts": [],
+      "supporting_evidence_ids": ["ev:lower:blast", "ev:lower:clean"],
+      "independent_evidence_classes": ["curated_annotation", "learned_sequence_model"],
+      "provider_availability": [
+        {"source_id": "blastp", "state": "successful", "required": false, "roles": ["candidate_source"]},
+        {"source_id": "clean", "state": "successful", "required": false, "roles": ["candidate_source"]}
+      ],
+      "policy": {"id": "fixture-policy", "version": "1"},
+      "rule_evaluation_ids": [],
+      "reason_codes": ["most_specific_supported_candidate"]
+    },
+    {
+      "query_id": "q_partial",
+      "predicted_ec": "3.2.1.-",
+      "ec_completeness": "partial",
+      "ec_depth": 3,
+      "confidence": "low",
+      "alternative_candidates": [{"candidate_ec": "3.2.1.26", "status": "insufficient_support"}],
+      "major_conflicts": [],
+      "supporting_evidence_ids": ["ev:partial:blast"],
+      "independent_evidence_classes": ["curated_annotation"],
+      "provider_availability": [
+        {"source_id": "blastp", "state": "successful", "required": false, "roles": ["candidate_source"]}
+      ],
+      "policy": {"id": "fixture-policy", "version": "1"},
+      "rule_evaluation_ids": [],
+      "reason_codes": ["common_parent_fallback"]
+    },
+    {
+      "query_id": "q_competing",
+      "predicted_ec": null,
+      "ec_completeness": null,
+      "ec_depth": null,
+      "confidence": "unresolved",
+      "alternative_candidates": [
+        {"candidate_ec": "1.1.1.1", "status": "conflicted"},
+        {"candidate_ec": "2.2.2.2", "status": "conflicted"}
+      ],
+      "major_conflicts": ["sequence_structure_disagreement"],
+      "supporting_evidence_ids": [],
+      "independent_evidence_classes": [],
+      "provider_availability": [
+        {"source_id": "blastp", "state": "successful", "required": false, "roles": ["candidate_source"]},
+        {"source_id": "foldseek", "state": "successful", "required": false, "roles": ["candidate_source"]}
+      ],
+      "policy": {"id": "fixture-policy", "version": "1"},
+      "rule_evaluation_ids": [],
+      "reason_codes": ["major_unresolved_conflict"]
+    },
+    {
+      "query_id": "q_constraint",
+      "predicted_ec": null,
+      "ec_completeness": null,
+      "ec_depth": null,
+      "confidence": "unresolved",
+      "alternative_candidates": [{"candidate_ec": "3.2.1.26", "status": "rejected"}],
+      "major_conflicts": ["required_rule_failure:3.2.1.26"],
+      "supporting_evidence_ids": [],
+      "independent_evidence_classes": [],
+      "provider_availability": [
+        {"source_id": "catalytic_motif", "state": "successful", "required": true, "roles": ["constraint"]}
+      ],
+      "policy": {"id": "fixture-policy", "version": "1"},
+      "rule_evaluation_ids": ["q_constraint:3.2.1.26:required_motif:1"],
+      "reason_codes": ["no_eligible_candidate"]
+    },
+    {
+      "query_id": "q_provider_failure<script>",
+      "predicted_ec": null,
+      "ec_completeness": null,
+      "ec_depth": null,
+      "confidence": "unresolved",
+      "alternative_candidates": [],
+      "major_conflicts": [],
+      "supporting_evidence_ids": [],
+      "independent_evidence_classes": [],
+      "provider_availability": [
+        {"source_id": "blastp", "state": "failed", "required": false, "roles": ["candidate_source"], "reason": "command failed <unsafe>"},
+        {"source_id": "hmmer", "state": "successful_zero", "required": false, "roles": ["constraint"]}
+      ],
+      "policy": {"id": "fixture-policy", "version": "1"},
+      "rule_evaluation_ids": [],
+      "reason_codes": ["no_ec_candidates", "no_eligible_candidate"]
+    }
+  ],
+  "candidates": [
+    {"query_id": "q_exact_high", "candidate_ec": "1.1.1.1", "depth": 4, "completeness": "complete", "final_candidate_status": "eligible", "supporting_evidence_ids": ["ev:high:blast", "ev:high:clean", "ev:high:structure"], "independent_evidence_classes": ["curated_annotation", "learned_sequence_model", "structure_homology"], "supporting_correlation_groups": ["blast:q_exact_high:ref", "clean:q_exact_high:model", "structural:q_exact_high:ref"], "confidence_features": {"supporting_record_count": 3}},
+    {"query_id": "q_exact_lower", "candidate_ec": "2.7.1.1", "depth": 4, "completeness": "complete", "final_candidate_status": "eligible", "supporting_evidence_ids": ["ev:lower:blast", "ev:lower:clean"], "independent_evidence_classes": ["curated_annotation", "learned_sequence_model"], "supporting_correlation_groups": ["blast:q_exact_lower:ref", "clean:q_exact_lower:model"], "conflicts": ["candidate_disagreement"], "confidence_features": {"supporting_record_count": 2}},
+    {"query_id": "q_partial", "candidate_ec": "3.2.1.-", "depth": 3, "completeness": "partial", "final_candidate_status": "eligible", "supporting_evidence_ids": ["ev:partial:blast"], "independent_evidence_classes": ["curated_annotation"], "supporting_correlation_groups": ["blast:q_partial:ref"], "confidence_features": {"supporting_record_count": 1}},
+    {"query_id": "q_competing", "candidate_ec": "1.1.1.1", "depth": 4, "completeness": "complete", "final_candidate_status": "conflicted", "supporting_evidence_ids": ["ev:competing:blast"], "independent_evidence_classes": ["curated_annotation"], "supporting_correlation_groups": ["blast:q_competing:ref"], "conflicts": ["sequence_structure_disagreement"], "confidence_features": {"supporting_record_count": 1}},
+    {"query_id": "q_competing", "candidate_ec": "2.2.2.2", "depth": 4, "completeness": "complete", "final_candidate_status": "conflicted", "supporting_evidence_ids": ["ev:competing:structure"], "independent_evidence_classes": ["structure_homology"], "supporting_correlation_groups": ["structural:q_competing:ref"], "conflicts": ["sequence_structure_disagreement"], "confidence_features": {"supporting_record_count": 1}},
+    {"query_id": "q_constraint", "candidate_ec": "3.2.1.26", "depth": 4, "completeness": "complete", "final_candidate_status": "rejected", "supporting_evidence_ids": ["ev:constraint:blast"], "independent_evidence_classes": ["curated_annotation"], "supporting_correlation_groups": ["blast:q_constraint:ref"], "failed_constraints": ["required_motif"], "conflicts": ["required_rule_failure:3.2.1.26"], "rejection_reasons": ["required_constraint_failed"], "confidence_features": {"supporting_record_count": 1}}
+  ],
+  "conflicts": [
+    {"query_id": "q_exact_lower", "conflict_id": "candidate_disagreement", "conflict_type": "candidate_disagreement", "severity": "minor", "action": "retain", "candidate_ecs": ["2.7.1.-", "2.7.1.1"], "evidence_ids": ["ev:lower:blast"], "correlation_groups": ["blast:q_exact_lower:ref"], "reason_code": "incompatible_ec_candidates", "explanation": "minor retained alternative"},
+    {"query_id": "q_competing", "conflict_id": "sequence_structure_disagreement", "conflict_type": "sequence_structure_disagreement", "severity": "major", "action": "force_unresolved", "candidate_ecs": ["1.1.1.1", "2.2.2.2"], "evidence_ids": ["ev:competing:blast", "ev:competing:structure"], "correlation_groups": ["blast:q_competing:ref", "structural:q_competing:ref"], "reason_code": "sequence_structure_conflict", "explanation": "sequence and structure disagree"},
+    {"query_id": "q_constraint", "conflict_id": "required_rule_failure:3.2.1.26", "conflict_type": "rule_disagreement", "severity": "major", "action": "force_unresolved", "candidate_ecs": ["3.2.1.26"], "evidence_ids": ["ev:constraint:motif"], "correlation_groups": ["motif:q_constraint:required_motif"], "reason_code": "required_biological_constraint_failed", "explanation": "required motif constraint failed"}
+  ],
+  "rule_evaluations": [
+    {"query_id": "q_exact_high", "candidate_ec": "1.1.1.1", "evaluation_id": "q_exact_high:1.1.1.1:domain:1", "rule_id": "domain", "config_source": "fixture-rules.yaml", "ruleset_version": "1", "outcome": "pass", "evidence_ids": ["ev:high:structure"], "correlation_groups": ["structural:q_exact_high:ref"], "reason_code": "condition_satisfied", "explanation": "required domain observed"},
+    {"query_id": "q_constraint", "candidate_ec": "3.2.1.26", "evaluation_id": "q_constraint:3.2.1.26:required_motif:1", "rule_id": "required_motif", "config_source": "fixture-rules.yaml", "ruleset_version": "1", "outcome": "fail", "evidence_ids": ["ev:constraint:motif"], "correlation_groups": ["motif:q_constraint:required_motif"], "reason_code": "required_condition_failed", "explanation": "required motif was absent"}
+  ]
+}

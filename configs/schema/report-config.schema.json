@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enzynotation.org/schema/v1/report-config.schema.json",
+  "title": "EnzyNotation report presentation configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "report"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "include_detailed_evidence", "include_provenance"],
+      "properties": {
+        "title": {"type": "string", "minLength": 1},
+        "include_detailed_evidence": {"type": "boolean"},
+        "include_provenance": {"type": "boolean"}
+      }
+    }
+  }
+}

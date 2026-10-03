@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enzynotation.org/schema/v1/report.schema.json",
+  "title": "EnzyNotation final structured report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "report_version", "enzynotation_version", "generated_at", "run", "integration_policy", "run_summary", "provider_availability", "queries", "evidence_files", "provenance"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "report_version": {"type": "string", "minLength": 1},
+    "enzynotation_version": {"type": "string", "minLength": 1},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["run_id", "input", "manifest"],
+      "properties": {
+        "run_id": {"type": "string", "minLength": 1},
+        "input": {"type": "object"},
+        "manifest": {"type": "string", "minLength": 1}
+      }
+    },
+    "integration_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "version": {"type": "string", "minLength": 1}
+      }
+    },
+    "run_summary": {"$ref": "#/$defs/runSummary"},
+    "provider_availability": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/providerStatus"}
+    },
+    "queries": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/queryReport"}
+    },
+    "evidence_files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256", "record_count"],
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "record_count": {"type": "integer", "minimum": 0}
+        }
+      }
+    },
+    "provenance": {"type": "object"}
+  },
+  "$defs": {
+    "annotation": {
+      "type": "object",
+      "required": ["query_id", "predicted_ec", "confidence", "annotation_status", "reason_codes", "alternative_candidates"],
+      "properties": {
+        "query_id": {"type": "string", "minLength": 1},
+        "predicted_ec": {"type": ["string", "null"]},
+        "ec_depth": {"type": ["integer", "null"], "minimum": 1, "maximum": 4},
+        "ec_completeness": {"type": ["string", "null"], "enum": ["complete", "partial", null]},
+        "confidence": {"enum": ["high", "medium", "low", "unresolved"]},
+        "annotation_status": {"enum": ["exact", "partial", "unresolved"]},
+        "reason_codes": {"type": "array", "items": {"type": "string"}},
+        "alternative_candidates": {"type": "array"}
+      }
+    },
+    "providerStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["query_id", "provider", "state", "required", "roles", "reason"],
+      "properties": {
+        "query_id": {"type": "string", "minLength": 1},
+        "provider": {"type": "string", "minLength": 1},
+        "state": {"enum": ["successful", "successful_zero_evidence", "disabled", "not_configured", "unavailable", "failed", "not_run"]},
+        "required": {"type": "boolean"},
+        "roles": {"type": "array", "items": {"type": "string"}},
+        "reason": {"type": ["string", "null"]}
+      }
+    },
+    "queryReport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["query_id", "annotation", "candidates", "conflicts", "rule_evaluations", "evidence_ids", "evidence_summary", "provider_status"],
+      "properties": {
+        "query_id": {"type": "string", "minLength": 1},
+        "annotation": {"$ref": "#/$defs/annotation"},
+        "candidates": {"type": "array", "items": {"type": "object"}},
+        "conflicts": {"type": "array", "items": {"type": "object"}},
+        "rule_evaluations": {"type": "array", "items": {"type": "object"}},
+        "evidence_ids": {"type": "array", "items": {"type": "string"}},
+        "evidence_summary": {"type": "array", "items": {"type": "object"}},
+        "provider_status": {"type": "array", "items": {"$ref": "#/$defs/providerStatus"}}
+      }
+    },
+    "runSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "total_queries", "exact_annotations", "partial_annotations", "unresolved_queries", "high_confidence", "medium_confidence", "low_confidence", "unresolved_confidence", "major_conflicts", "minor_conflicts", "provider_failures", "provider_unavailable"],
+      "properties": {
+        "schema_version": {"const": 1},
+        "total_queries": {"type": "integer", "minimum": 0},
+        "exact_annotations": {"type": "integer", "minimum": 0},
+        "partial_annotations": {"type": "integer", "minimum": 0},
+        "unresolved_queries": {"type": "integer", "minimum": 0},
+        "high_confidence": {"type": "integer", "minimum": 0},
+        "medium_confidence": {"type": "integer", "minimum": 0},
+        "low_confidence": {"type": "integer", "minimum": 0},
+        "unresolved_confidence": {"type": "integer", "minimum": 0},
+        "major_conflicts": {"type": "integer", "minimum": 0},
+        "minor_conflicts": {"type": "integer", "minimum": 0},
+        "provider_failures": {"type": "integer", "minimum": 0},
+        "provider_unavailable": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

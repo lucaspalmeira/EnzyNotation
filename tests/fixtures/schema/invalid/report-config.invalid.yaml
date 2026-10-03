@@ -1,0 +1,5 @@
+schema_version: 1
+report:
+  title: Invalid report
+  include_detailed_evidence: "yes"
+  include_provenance: true

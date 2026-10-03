@@ -19,6 +19,7 @@ from enzynotation.fasta import (
 )
 from enzynotation.integration import load_integration_config
 from enzynotation.logging_utils import configure_logging
+from enzynotation.reporting import load_report_config
 from enzynotation.rules import load_ec_rules
 from enzynotation.runner import PipelineRunner
 from enzynotation.stages.blast import BlastStage
@@ -27,6 +28,7 @@ from enzynotation.stages.domains import DomainsStage
 from enzynotation.stages.foldseek import FoldseekStage
 from enzynotation.stages.integrate import IntegrateStage
 from enzynotation.stages.motifs import MotifsStage
+from enzynotation.stages.report import ReportStage
 from enzynotation.stages.structures import StructuresStage
 from enzynotation.stages.tmalign import TMAlignStage
 from enzynotation.stages.validate import ValidationStage
@@ -172,6 +174,17 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="PATH",
         help="optional EC-specific declarative rules for integration",
     )
+    run.add_argument(
+        "--report",
+        action="store_true",
+        help="generate final TSV, JSON, and static HTML reports after integration",
+    )
+    run.add_argument(
+        "--report-config",
+        type=Path,
+        metavar="PATH",
+        help="presentation-only report configuration used with --report",
+    )
     return parser
 
 
@@ -259,6 +272,10 @@ def _run_pipeline(args: argparse.Namespace) -> int:
         raise EnzyNotationError("--confidence-config requires --integration-config")
     if args.ec_rules is not None and args.integration_config is None:
         raise EnzyNotationError("--ec-rules requires --integration-config")
+    if args.report and args.integration_config is None:
+        raise EnzyNotationError("--report requires --integration-config")
+    if args.report_config is not None and not args.report:
+        raise EnzyNotationError("--report-config requires --report")
     profile = (
         load_family_profile(args.family_config)
         if args.family_config is not None
@@ -317,6 +334,8 @@ def _run_pipeline(args: argparse.Namespace) -> int:
                 family_profile=profile,
             )
         )
+    if args.report:
+        stages.append(ReportStage(load_report_config(args.report_config)))
     workflow = Workflow(stages) if len(stages) > 1 else None
     result = runner.run(
         args.input,

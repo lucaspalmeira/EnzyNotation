@@ -8,12 +8,13 @@ them to a separate integration layer that may produce an EC-number prediction.
 The architecture is family-agnostic: enzyme-family and EC-specific knowledge is
 configuration, not Python control flow.
 
-Milestones 0 through 7 are currently implemented. The local execution core can
+Milestones 0 through 8 are currently implemented. The local execution core can
 run and resume validation plus opt-in BLASTp, CLEAN, HMMER/InterProScan domain,
 catalytic-motif, supplied-structure, Foldseek, and selective TM-align evidence
 stages. It can also run opt-in canonical evidence integration and produce a
-compact final annotation. General container packaging, Slurm execution,
-structure prediction, and polished reports remain for later milestones.
+compact final annotation and deterministic final TSV, JSON, and static HTML
+reports. General container packaging, Slurm execution, and structure prediction
+remain for later milestones.
 
 ## Architectural boundaries
 
@@ -133,8 +134,14 @@ results/<run_id>/
 │   └── integration_summary.json
 └── reports/
     ├── annotations.tsv
+    ├── evidence.tsv
+    ├── candidates.tsv
+    ├── conflicts.tsv
+    ├── rule_evaluations.tsv
+    ├── provider_status.tsv
     ├── report.json
-    └── report.html
+    ├── report.html
+    └── run_summary.json
 
 logs/<run_id>/
 └── <stage_id>/
@@ -153,7 +160,7 @@ release identifier.
 
 ## Configuration model and precedence
 
-Configuration is split into five versioned document types:
+Configuration is split into six versioned document types:
 
 - pipeline configuration controls input, output, execution, paths, tools, and
   resources;
@@ -165,6 +172,8 @@ Configuration is split into five versioned document types:
   EC specificity, inheritance, tie, and conflict behavior;
 - confidence configuration defines heuristic categorical gates independently
   from provider-native scores.
+- report configuration controls presentation only, such as the report title
+  and whether detailed evidence/provenance appears in HTML.
 
 Pipeline overlays use deterministic deep-merge precedence, from lowest to
 highest:
@@ -196,7 +205,10 @@ selected by `--structures-config`, `--foldseek-config`, and
 stage signatures. Milestone 7 adds `--integration-config`, optional
 `--confidence-config`, and optional `--ec-rules`; their documents, the family
 profile, canonical evidence inventory, schema, and provider states participate
-in the integration-stage signature.
+in the integration-stage signature. Milestone 8 adds `--report` and optional
+`--report-config`; integration outputs, canonical evidence, report schema,
+configuration, and template participate in the report signature without
+invalidating upstream provider stages.
 
 ## Evidence independence
 

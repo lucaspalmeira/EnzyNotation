@@ -1,0 +1,5 @@
+schema_version: 1
+report:
+  title: EnzyNotation final report
+  include_detailed_evidence: true
+  include_provenance: true

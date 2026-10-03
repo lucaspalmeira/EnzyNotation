@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${title}</title>
+  <style>
+    :root { color-scheme: light; --ink:#172026; --muted:#5b6870; --line:#d6dde1; --paper:#fff; --soft:#f4f7f8; --high:#166534; --medium:#805400; --low:#9a3412; --unresolved:#991b1b; }
+    * { box-sizing:border-box; }
+    body { margin:0; color:var(--ink); background:var(--soft); font:14px/1.5 system-ui,sans-serif; }
+    main { width:min(1180px,calc(100% - 32px)); margin:0 auto; padding:32px 0 64px; }
+    h1,h2,h3 { margin:0 0 10px; letter-spacing:0; }
+    .intro { margin-bottom:24px; }
+    .muted,.query-id { color:var(--muted); }
+    .notice { padding:10px 12px; border-left:4px solid #475569; background:#eef2f4; }
+    .query { margin:20px 0; padding:20px; border:1px solid var(--line); border-left:6px solid #475569; background:var(--paper); border-radius:6px; }
+    .status-exact { border-left-color:var(--high); }
+    .status-partial { border-left-color:var(--medium); }
+    .status-unresolved { border-left-color:var(--unresolved); }
+    .badge { display:inline-block; margin:0 6px 8px 0; padding:2px 7px; border:1px solid currentColor; border-radius:4px; font-weight:650; }
+    .status-unresolved .status,.status-unresolved .confidence { color:var(--unresolved); }
+    .status-partial .status { color:var(--medium); }
+    .status-exact .status { color:var(--high); }
+    .conflicts.major { padding:12px; border:2px solid var(--unresolved); background:#fff7f7; }
+    details { margin-top:12px; border-top:1px solid var(--line); padding-top:10px; }
+    summary { cursor:pointer; font-weight:700; }
+    table { width:100%; margin:10px 0; border-collapse:collapse; background:var(--paper); }
+    th,td { padding:7px 8px; border:1px solid var(--line); text-align:left; vertical-align:top; overflow-wrap:anywhere; }
+    th { background:#e9eff1; }
+    pre { padding:12px; overflow:auto; background:#111827; color:#f8fafc; white-space:pre-wrap; }
+    @media (max-width:720px) { main{width:min(100% - 16px,1180px)} .query{padding:12px} table{display:block;overflow:auto} }
+  </style>
+</head>
+<body>
+<main>
+  <header class="intro">
+    <p class="muted">Run ${run_id} · ${generated_at}</p>
+    <h1>${title}</h1>
+    <p class="notice">Confidence is heuristic and categorical, not a statistically calibrated probability. Reporting presents integration decisions and does not perform EC inference.</p>
+  </header>
+  <section aria-labelledby="overview"><h2 id="overview">Run overview</h2>${overview}</section>
+  <section aria-labelledby="results"><h2 id="results">Query results</h2>${queries}</section>
+  <section aria-labelledby="provenance"><h2 id="provenance">Provenance</h2>${provenance}</section>
+</main>
+</body>
+</html>
