@@ -1,0 +1,7 @@
+schema_version: 1
+policy_id: invalid
+policy_version: "1"
+calibration:
+  status: calibrated
+  documentation: invalid status for an uncalibrated policy
+confidence: {}

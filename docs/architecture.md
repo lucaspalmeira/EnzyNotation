@@ -8,12 +8,12 @@ them to a separate integration layer that may produce an EC-number prediction.
 The architecture is family-agnostic: enzyme-family and EC-specific knowledge is
 configuration, not Python control flow.
 
-Milestones 0 through 6 are currently implemented. The local execution core can
+Milestones 0 through 7 are currently implemented. The local execution core can
 run and resume validation plus opt-in BLASTp, CLEAN, HMMER/InterProScan domain,
 catalytic-motif, supplied-structure, Foldseek, and selective TM-align evidence
-stages. The integration engine, general container packaging, Slurm execution,
-structure prediction, and final reports described here remain contracts for
-later milestones and are not currently available.
+stages. It can also run opt-in canonical evidence integration and produce a
+compact final annotation. General container packaging, Slurm execution,
+structure prediction, and polished reports remain for later milestones.
 
 ## Architectural boundaries
 
@@ -41,7 +41,7 @@ Providers never call the integration layer internally and never emit a final
 annotation. Parsers never discard a qualifying alternative solely because it
 was not ranked first. The reporting layer never repairs or hides conflicts.
 
-## Planned data flow
+## Implemented data flow
 
 ```text
 input FASTA
@@ -102,7 +102,8 @@ existence of an output file.
 
 ## Run directory layout
 
-The planned canonical layout is:
+The canonical layout, including the currently implemented integration outputs,
+is:
 
 ```text
 results/<run_id>/
@@ -123,10 +124,13 @@ results/<run_id>/
 ├── evidence/
 │   ├── evidence.jsonl
 │   └── evidence.tsv
+├── final_annotation.json
 ├── integration/
-│   ├── candidates.tsv
-│   ├── rule-evaluations.jsonl
-│   └── conflicts.tsv
+├── stages/integrate/normalized/
+│   ├── candidate_scorecards.jsonl
+│   ├── conflicts.jsonl
+│   ├── rule_evaluations.jsonl
+│   └── integration_summary.json
 └── reports/
     ├── annotations.tsv
     ├── report.json
@@ -149,14 +153,18 @@ release identifier.
 
 ## Configuration model and precedence
 
-Configuration is split into three versioned document types:
+Configuration is split into five versioned document types:
 
 - pipeline configuration controls input, output, execution, paths, tools, and
   resources;
 - family configuration expresses expected domains, catalytic motifs, and
   structural signatures;
 - EC-rule configuration defines candidate-specific requirements, known
-  correlations, conflict behavior, and confidence gates.
+  correlations, conflict behavior, and confidence gates;
+- integration configuration maps canonical inputs to provider roles and defines
+  EC specificity, inheritance, tie, and conflict behavior;
+- confidence configuration defines heuristic categorical gates independently
+  from provider-native scores.
 
 Pipeline overlays use deterministic deep-merge precedence, from lowest to
 highest:
@@ -185,8 +193,10 @@ a separately versioned CLEAN provider document selected by `--clean-config`.
 Milestone 6 adds independent structure-mapping, Foldseek, and TM-align documents
 selected by `--structures-config`, `--foldseek-config`, and
 `--tmalign-config`. Their resolved values and structural inputs participate in
-stage signatures.
-EC-rule documents are not yet loaded.
+stage signatures. Milestone 7 adds `--integration-config`, optional
+`--confidence-config`, and optional `--ec-rules`; their documents, the family
+profile, canonical evidence inventory, schema, and provider states participate
+in the integration-stage signature.
 
 ## Evidence independence
 

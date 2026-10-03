@@ -137,7 +137,7 @@ versions. Secrets and credentials must never be recorded in command arguments.
 
 ## Conflict contract
 
-The integration layer will classify conflicts using stable identifiers:
+The integration layer classifies conflicts using stable identifiers:
 
 - `candidate_disagreement`: strong evidence supports incompatible ECs;
 - `hierarchy_disagreement`: evidence supports incompatible EC hierarchy levels;
@@ -172,9 +172,15 @@ The final categories mean:
 
 Confidence is a categorical integration result, not the average of provider
 scores. `unresolved` is an outcome, not a confidence synonym for zero. All
-thresholds and gates come from the versioned EC-rule document. These categories
-are heuristic until calibrated against a curated benchmark; reports must expose
-that calibration status.
+thresholds and gates come from the versioned integration/confidence policy and
+may be constrained by an EC-rule document. These categories are heuristic until
+calibrated against a curated benchmark; outputs expose that calibration status.
+
+Provider availability is a separate integration object with `successful`,
+`successful_zero`, `disabled`, `not_configured`, `failed`, `unavailable`, or
+`not_run` state plus required/optional status and configured roles. Availability
+is not a canonical biological evidence assertion. In particular, failure and
+absence never become contradiction.
 
 ## Family rules
 
@@ -209,4 +215,3 @@ JSON is canonical for schemas and individual evidence records. YAML is used for
 human-authored pipeline, family, and EC-rule configuration. Parsers must use
 safe structured-data APIs. TSV exports use documented columns and JSON encoding
 for nested values; they must not be reparsed as the lossless integration input.
-

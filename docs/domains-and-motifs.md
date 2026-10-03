@@ -79,7 +79,7 @@ biology. A domain rule declares:
 - minimum and maximum occurrence counts;
 - optional query-coverage and E-value limits;
 - an optional integer `architecture_order`;
-- optional candidate EC values for a future integration layer.
+- optional candidate EC values for the integration layer.
 
 The Python evaluator contains no branches for named enzyme families. To add a
 family, copy a valid family document, assign stable rule IDs and a version,

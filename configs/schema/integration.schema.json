@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enzynotation.org/schema/v1/integration.schema.json",
+  "title": "EnzyNotation evidence integration configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "integration"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "integration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "policy_id", "policy_version", "calibration", "confidence_policy", "evidence_files", "providers", "ec_specificity", "conflict_policy"],
+      "properties": {
+        "required": {"type": "boolean"},
+        "policy_id": {"$ref": "#/$defs/stableIdentifier"},
+        "policy_version": {"type": "string", "minLength": 1},
+        "calibration": {"const": "heuristic"},
+        "confidence_policy": {"type": "string", "minLength": 1},
+        "evidence_files": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        },
+        "providers": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/provider"},
+          "minItems": 1
+        },
+        "ec_specificity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["allow_partial", "inherit_complete_to_parents", "prefer_most_specific_supported", "tie_policy", "exact_ec_requires", "partial_ec_requires"],
+          "properties": {
+            "allow_partial": {"type": "boolean"},
+            "inherit_complete_to_parents": {"type": "boolean"},
+            "prefer_most_specific_supported": {"type": "boolean"},
+            "tie_policy": {"enum": ["unresolved", "common_parent"]},
+            "exact_ec_requires": {"$ref": "#/$defs/supportGate"},
+            "partial_ec_requires": {"$ref": "#/$defs/supportGate"}
+          }
+        },
+        "conflict_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["candidate_disagreement", "hierarchy_disagreement", "required_feature_absent", "forbidden_feature_present", "sequence_structure_disagreement", "curation_disagreement", "rule_disagreement", "provenance_inadequate"],
+          "properties": {
+            "candidate_disagreement": {"$ref": "#/$defs/conflictHandling"},
+            "hierarchy_disagreement": {"$ref": "#/$defs/conflictHandling"},
+            "required_feature_absent": {"$ref": "#/$defs/conflictHandling"},
+            "forbidden_feature_present": {"$ref": "#/$defs/conflictHandling"},
+            "sequence_structure_disagreement": {"$ref": "#/$defs/conflictHandling"},
+            "curation_disagreement": {"$ref": "#/$defs/conflictHandling"},
+            "rule_disagreement": {"$ref": "#/$defs/conflictHandling"},
+            "provenance_inadequate": {"$ref": "#/$defs/conflictHandling"}
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "stableIdentifier": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"},
+    "sourceIdentifier": {
+      "oneOf": [
+        {"enum": ["blastp", "clean", "hmmer", "interproscan", "catalytic_motif", "foldseek", "tmalign"]},
+        {"type": "string", "pattern": "^x_[a-z0-9][a-z0-9_]*$"}
+      ]
+    },
+    "provider": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_id", "stage_id", "required", "roles"],
+      "properties": {
+        "source_id": {"$ref": "#/$defs/sourceIdentifier"},
+        "stage_id": {"$ref": "#/$defs/stableIdentifier"},
+        "required": {"type": "boolean"},
+        "roles": {
+          "type": "array",
+          "items": {"enum": ["candidate_source", "supporting", "constraint", "contextual", "contradiction_capable"]},
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "summary_path": {"type": "string", "minLength": 1},
+        "summary_status_key": {"type": "string", "minLength": 1},
+        "evidence_path": {"type": "string", "minLength": 1}
+      }
+    },
+    "supportGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minimum_independent_classes", "minimum_correlation_groups", "required_evidence_classes"],
+      "properties": {
+        "minimum_independent_classes": {"type": "integer", "minimum": 1},
+        "minimum_correlation_groups": {"type": "integer", "minimum": 1},
+        "required_evidence_classes": {
+          "type": "array",
+          "items": {"enum": ["sequence_homology", "learned_sequence_model", "domain_architecture", "catalytic_motif", "structure_homology", "curated_annotation", "user_assertion"]},
+          "uniqueItems": true
+        }
+      }
+    },
+    "conflictHandling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["severity", "action"],
+      "properties": {
+        "severity": {"enum": ["minor", "major"]},
+        "action": {"enum": ["retain", "force_unresolved"]}
+      }
+    }
+  }
+}

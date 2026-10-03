@@ -17,12 +17,15 @@ from enzynotation.fasta import (
     validate_fasta,
     write_normalized_fasta,
 )
+from enzynotation.integration import load_integration_config
 from enzynotation.logging_utils import configure_logging
+from enzynotation.rules import load_ec_rules
 from enzynotation.runner import PipelineRunner
 from enzynotation.stages.blast import BlastStage
 from enzynotation.stages.clean import CleanStage
 from enzynotation.stages.domains import DomainsStage
 from enzynotation.stages.foldseek import FoldseekStage
+from enzynotation.stages.integrate import IntegrateStage
 from enzynotation.stages.motifs import MotifsStage
 from enzynotation.stages.structures import StructuresStage
 from enzynotation.stages.tmalign import TMAlignStage
@@ -114,7 +117,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--family-config",
         type=Path,
         metavar="PATH",
-        help="family profile used by domain and motif evidence stages",
+        help="family profile used by domain, motif, and integration stages",
     )
     run.add_argument(
         "--hmmer-config",
@@ -150,6 +153,24 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         metavar="PATH",
         help="enable selective TM-align evidence with this YAML configuration",
+    )
+    run.add_argument(
+        "--integration-config",
+        type=Path,
+        metavar="PATH",
+        help="enable final evidence integration with this YAML policy",
+    )
+    run.add_argument(
+        "--confidence-config",
+        type=Path,
+        metavar="PATH",
+        help="override the confidence policy referenced by integration config",
+    )
+    run.add_argument(
+        "--ec-rules",
+        type=Path,
+        metavar="PATH",
+        help="optional EC-specific declarative rules for integration",
     )
     return parser
 
@@ -223,15 +244,21 @@ def _run_pipeline(args: argparse.Namespace) -> int:
         clean_config = load_clean_config(args.clean_config)
         stages.append(CleanStage(clean_config))
     domain_requested = args.hmmer_config is not None or args.interpro_config is not None
-    family_requested = domain_requested or args.motifs
-    if family_requested and args.family_config is None:
+    family_required = domain_requested or args.motifs
+    if family_required and args.family_config is None:
         raise EnzyNotationError(
             "--family-config is required with domain or motif evidence"
         )
-    if args.family_config is not None and not family_requested:
+    if args.family_config is not None and not (
+        family_required or args.integration_config is not None
+    ):
         raise EnzyNotationError(
-            "--family-config requires --hmmer-config, --interpro-config, or --motifs"
+            "--family-config requires a domain, motif, or integration stage"
         )
+    if args.confidence_config is not None and args.integration_config is None:
+        raise EnzyNotationError("--confidence-config requires --integration-config")
+    if args.ec_rules is not None and args.integration_config is None:
+        raise EnzyNotationError("--ec-rules requires --integration-config")
     profile = (
         load_family_profile(args.family_config)
         if args.family_config is not None
@@ -270,6 +297,26 @@ def _run_pipeline(args: argparse.Namespace) -> int:
         assert foldseek_config is not None
         tmalign_config = load_tmalign_config(args.tmalign_config)
         stages.append(TMAlignStage(tmalign_config, foldseek=foldseek_config))
+    if args.integration_config is not None:
+        integration_config = load_integration_config(
+            args.integration_config,
+            confidence_path=args.confidence_config,
+        )
+        ec_rules = (
+            load_ec_rules(
+                args.ec_rules,
+                schema_path=Path("configs/schema/ec-rules.schema.json"),
+            )
+            if args.ec_rules is not None
+            else None
+        )
+        stages.append(
+            IntegrateStage(
+                integration_config,
+                ec_rules=ec_rules,
+                family_profile=profile,
+            )
+        )
     workflow = Workflow(stages) if len(stages) > 1 else None
     result = runner.run(
         args.input,

@@ -9,7 +9,7 @@ has source ID `clean`, evidence class `learned_sequence_model`, and a
 correlation group shared by candidates from the same model, run, and query.
 
 This provider is enzyme-family agnostic. It contains no GH32 mappings or
-family-specific decision rules. The future integration layer remains the only
+family-specific decision rules. The integration layer remains the only
 component permitted to combine CLEAN with BLAST, domains, motifs, or structural
 evidence and produce a final annotation.
 
@@ -238,7 +238,7 @@ execution failure: it is preserved as `unknown`/`unavailable`, with
 ## Limitations
 
 CLEAN is one model-based source of EC evidence. Its predictions do not bypass
-conflict handling, evidence correlation, the future integration layer, or
+conflict handling, evidence correlation, the integration layer, or
 future final-confidence classification. In particular, CLEAN agreement with
 sequence homology may still reflect shared training/reference information and
 must not automatically be treated as independent confirmation.

@@ -7,7 +7,7 @@ of evidence rather than assigned from the first BLAST hit.
 
 ## Project status
 
-Milestones 0 through 6 are implemented. The repository currently provides:
+Milestones 0 through 7 are implemented. The repository currently provides:
 
 - an installable Python package and command-line interface;
 - layered YAML configuration;
@@ -37,11 +37,14 @@ Milestones 0 through 6 are implemented. The repository currently provides:
 - broad Foldseek search through an official-image Docker Compose adapter;
 - selective external TM-align confirmation preserving both TM-score directions;
 - explicit structural-reference metadata and correlated canonical evidence;
+- opt-in correlation-aware EC candidate integration from canonical evidence;
+- declarative family/EC constraints, typed conflicts, and EC hierarchy fallback;
+- transparent candidate scorecards and heuristic categorical confidence;
+- compact per-query final annotations, including partial and unresolved results;
 - unit tests and linting configuration.
 
-Evidence integration, final EC prediction, confidence classification, final
-annotation reports, general containers, and Slurm execution are planned but
-are **not implemented yet**. Structure prediction is also not implemented.
+Polished TSV/HTML reports, general containers, Slurm execution, benchmark
+calibration, and structure prediction are **not implemented yet**.
 
 ## Requirements
 
@@ -206,7 +209,7 @@ metadata.
 EnzyNotation does **not** assign an EC number from the first BLAST hit. BLAST
 rank is only a deterministic inspection order. Sequence homology and an EC
 transferred from curated metadata are separate, correlated evidence records;
-only the future integration layer may make a final EC prediction.
+only the opt-in integration layer may make a final EC prediction.
 
 See [docs/blast.md](docs/blast.md) for database preparation, metadata formats,
 configuration, output fields, multiple-HSP aggregation, filtering, provenance,
@@ -286,7 +289,7 @@ are not numerically reordered unless a future configuration establishes their
 meaning. CLEAN's own candidate list and order are always preserved.
 
 CLEAN produces correlated model-prediction evidence only. It never emits a
-final EnzyNotation EC annotation and cannot bypass the future integration and
+final EnzyNotation EC annotation and cannot bypass the integration and
 conflict-handling layer. See [docs/clean.md](docs/clean.md) for runtime setup,
 licensing, mounts, filtering, outputs, score interpretation, failure semantics,
 and limitations.
@@ -326,6 +329,40 @@ See [docs/structural-evidence.md](docs/structural-evidence.md) for manifests,
 metadata, image/database configuration, fields, filters, outputs, provenance,
 cache invalidation, failure states, and scientific limits.
 
+## Evidence integration
+
+Run the opt-in integration stage after any explicitly selected providers:
+
+```bash
+enzynotation run proteins.fasta \
+  --run-id integrated-example \
+  --blast-config configs/tools/blast.yaml \
+  --clean-config configs/tools/clean.yaml \
+  --integration-config configs/integration/default.yaml
+```
+
+Use `--ec-rules PATH` for candidate-specific declarative constraints,
+`--family-config PATH` for family-scoped rules, and `--confidence-config PATH`
+to override the referenced confidence policy. Integration consumes only
+canonical evidence JSONL. It does not rerun or reparse providers, and selecting
+integration never silently enables an expensive provider.
+
+Outputs are written to `stages/integrate/normalized/` as candidate scorecards,
+conflicts, rule evaluations, and a summary. `final_annotation.json` contains
+one compact result per query. Complete, partial, and unresolved results are all
+valid scientific outcomes.
+
+The default policy uses explicit support gates and correlation groups, not a
+vote or weighted score. Exact ECs require stronger support than partial ECs.
+BLAST homology plus its annotation, Foldseek plus TM-align for one structure
+pair, and several CLEAN alternatives from one model do not become independent
+confirmations by record multiplication. Confidence is categorical and
+heuristic; no probability is emitted.
+
+See [docs/evidence-integration.md](docs/evidence-integration.md) for provider
+roles, hierarchy, tie handling, conflicts, confidence, provenance, caching,
+outputs, and worked synthetic examples.
+
 ## Configuration
 
 Built-in defaults are mirrored in `configs/default.yaml`. One or more YAML
@@ -360,13 +397,15 @@ logging:
 ```
 
 The versioned contracts for pipeline, BLAST, CLEAN, HMMER, InterProScan,
-structures, Foldseek, TM-align, family, EC-rule, and evidence documents are in
-`configs/schema/`, with valid examples in `examples/configs/`.
+structures, Foldseek, TM-align, family, EC-rule, evidence, integration, and
+confidence documents are in `configs/schema/`, with valid examples in
+`examples/configs/`.
 The current configuration loader validates the Milestone 1 fields shown above,
 and the local runner additionally honors `pipeline.run_id` when present. BLAST
 and CLEAN load separate versioned provider documents when their CLI options are
 supplied. Domain/motif workflows load a family document with `--family-config`
-plus the selected tool documents. EC-rule documents are not yet loaded.
+plus the selected tool documents. The integration stage loads its policy,
+confidence policy, optional family profile, and optional EC-rule document.
 
 Configuration precedence is deterministic: built-in defaults are followed by
 site/project overlays in supplied order, and a later value overrides an earlier
@@ -425,12 +464,12 @@ The existing Compose files are provider-specific runtime adapters, not general
 EnzyNotation packaging. Large biological databases and model weights are not
 stored in the repository or embedded in EnzyNotation container images.
 
-## Planned pipeline
+## Remaining pipeline work
 
-The implemented BLAST, CLEAN, domain, motif, Foldseek, and TM-align evidence
-will feed a later, separate inference layer that evaluates candidate EC
-numbers, conflicting evidence, and transparent confidence categories (`high`,
-`medium`, `low`, and `unresolved`).
+The implemented integration layer evaluates canonical BLAST, CLEAN, domain,
+motif, Foldseek, and TM-align evidence into EC candidates, conflicts, and
+transparent confidence categories (`high`, `medium`, `low`, and `unresolved`).
+Milestone 8 will add the polished report suite without changing these decisions.
 
 General Docker packaging will support local development. Apptainer/Singularity
 and dependency-aware Slurm jobs will support cluster execution. Until those
@@ -439,7 +478,7 @@ adapters are supplied and no Slurm commands are available.
 
 ## Architecture and data contracts
 
-The planned pipeline separates input handling, evidence providers, parsers,
+The pipeline separates input handling, evidence providers, parsers,
 integration, reporting, and execution backends. Providers emit observations;
 only the integration layer may produce a final EC prediction. Raw artifacts are
 preserved separately from normalized canonical evidence.
@@ -454,7 +493,7 @@ requirements merely because they came from different executables.
 See:
 
 - `docs/architecture.md` for component boundaries, configuration precedence,
-  execution semantics, and the planned run layout;
+  execution semantics, and the run layout;
 - `docs/data-contracts.md` for canonical identifiers, evidence, EC candidates,
   provenance, conflicts, family rules, and EC rules;
 - `docs/scientific-policy.md` for non-negotiable inference and confidence
@@ -463,13 +502,15 @@ See:
   family-profile syntax;
 - `docs/clean.md` for the implemented Milestone 5 provider and score semantics;
 - `docs/structural-evidence.md` for implemented Milestone 6 structure mapping,
-  Foldseek, TM-align, and correlation semantics.
+  Foldseek, TM-align, and correlation semantics;
+- `docs/evidence-integration.md` for implemented candidate integration,
+  declarative rules, conflicts, categorical confidence, and final annotations.
 
-The family schema is consumed by implemented domain and motif stages. EC
-integration, confidence, and reporting schemas remain contracts for upcoming
-implementations. BLASTp, CLEAN, HMMER/InterProScan domains, catalytic motifs,
-supplied structures, Foldseek, and selective TM-align are available;
-integration, reporting, general container, and Slurm commands are not.
+The family schema is consumed by domain, motif, and integration stages. EC
+rules, integration policy, and confidence schemas are active contracts.
+BLASTp, CLEAN, HMMER/InterProScan domains, catalytic motifs, supplied
+structures, Foldseek, selective TM-align, and integration are available;
+polished reporting, general container, and Slurm commands are not.
 
 ## Scientific and architectural policy
 

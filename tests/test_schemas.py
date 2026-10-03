@@ -17,6 +17,16 @@ EXAMPLE_DIRECTORY = Path("examples/configs")
 INVALID_DIRECTORY = Path("tests/fixtures/schema/invalid")
 
 CONTRACTS = {
+    "integration": (
+        SCHEMA_DIRECTORY / "integration.schema.json",
+        Path("examples/configs/integration.example.yaml"),
+        INVALID_DIRECTORY / "integration.invalid.yaml",
+    ),
+    "confidence": (
+        SCHEMA_DIRECTORY / "confidence.schema.json",
+        Path("configs/integration/confidence.yaml"),
+        INVALID_DIRECTORY / "confidence.invalid.yaml",
+    ),
     "structures": (
         SCHEMA_DIRECTORY / "structures.schema.json",
         EXAMPLE_DIRECTORY / "structures.example.yaml",

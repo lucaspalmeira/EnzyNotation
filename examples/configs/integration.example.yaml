@@ -1,0 +1,72 @@
+schema_version: 1
+integration:
+  required: true
+  policy_id: example-conservative-policy
+  policy_version: "1"
+  calibration: heuristic
+  confidence_policy: ../../configs/integration/confidence.yaml
+  evidence_files:
+    - evidence/blast_evidence.jsonl
+    - evidence/clean_evidence.jsonl
+    - evidence/domain_evidence.jsonl
+    - evidence/motif_evidence.jsonl
+    - evidence/foldseek_evidence.jsonl
+    - evidence/tmalign_evidence.jsonl
+  providers:
+    - source_id: blastp
+      stage_id: blast
+      required: false
+      roles: [candidate_source, supporting, contextual]
+      evidence_path: evidence/blast_evidence.jsonl
+    - source_id: clean
+      stage_id: clean
+      required: false
+      roles: [candidate_source, supporting]
+      evidence_path: evidence/clean_evidence.jsonl
+    - source_id: hmmer
+      stage_id: domains
+      required: false
+      roles: [supporting, constraint, contradiction_capable]
+      evidence_path: evidence/domain_evidence.jsonl
+    - source_id: interproscan
+      stage_id: domains
+      required: false
+      roles: [supporting, constraint, contradiction_capable]
+      evidence_path: evidence/domain_evidence.jsonl
+    - source_id: catalytic_motif
+      stage_id: motifs
+      required: false
+      roles: [supporting, constraint, contradiction_capable]
+      evidence_path: evidence/motif_evidence.jsonl
+    - source_id: foldseek
+      stage_id: foldseek
+      required: false
+      roles: [candidate_source, supporting, contextual]
+      evidence_path: evidence/foldseek_evidence.jsonl
+    - source_id: tmalign
+      stage_id: tmalign
+      required: false
+      roles: [supporting, contextual]
+      evidence_path: evidence/tmalign_evidence.jsonl
+  ec_specificity:
+    allow_partial: true
+    inherit_complete_to_parents: true
+    prefer_most_specific_supported: true
+    tie_policy: common_parent
+    exact_ec_requires:
+      minimum_independent_classes: 2
+      minimum_correlation_groups: 2
+      required_evidence_classes: []
+    partial_ec_requires:
+      minimum_independent_classes: 1
+      minimum_correlation_groups: 1
+      required_evidence_classes: []
+  conflict_policy:
+    candidate_disagreement: {severity: minor, action: retain}
+    hierarchy_disagreement: {severity: major, action: force_unresolved}
+    required_feature_absent: {severity: major, action: force_unresolved}
+    forbidden_feature_present: {severity: major, action: force_unresolved}
+    sequence_structure_disagreement: {severity: major, action: force_unresolved}
+    curation_disagreement: {severity: major, action: force_unresolved}
+    rule_disagreement: {severity: major, action: force_unresolved}
+    provenance_inadequate: {severity: major, action: force_unresolved}

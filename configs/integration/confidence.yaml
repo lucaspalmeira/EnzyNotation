@@ -1,0 +1,38 @@
+schema_version: 1
+policy_id: conservative-categorical
+policy_version: "1"
+calibration:
+  status: heuristic
+  documentation: >-
+    Operational categories have not been calibrated against a curated benchmark.
+confidence:
+  high:
+    minimum_independent_classes: 3
+    minimum_correlation_groups: 3
+    required_evidence_classes: []
+    maximum_major_conflicts: 0
+    maximum_minor_conflicts: 0
+    allowed_completeness: [complete]
+    required_rule_ids: []
+    minimum_supporting_records: 1
+    maximum_conflicting_classes: 0
+  medium:
+    minimum_independent_classes: 2
+    minimum_correlation_groups: 2
+    required_evidence_classes: []
+    maximum_major_conflicts: 0
+    maximum_minor_conflicts: 1
+    allowed_completeness: [complete, partial]
+    required_rule_ids: []
+    minimum_supporting_records: 1
+    maximum_conflicting_classes: 1
+  low:
+    minimum_independent_classes: 1
+    minimum_correlation_groups: 1
+    required_evidence_classes: []
+    maximum_major_conflicts: 0
+    maximum_minor_conflicts: 2
+    allowed_completeness: [complete, partial]
+    required_rule_ids: []
+    minimum_supporting_records: 1
+    maximum_conflicting_classes: 1

@@ -15,3 +15,7 @@ class FastaError(EnzyNotationError):
 
 class ECNumberError(ValueError, EnzyNotationError):
     """Raised when an EC number is malformed."""
+
+
+class IntegrationError(EnzyNotationError):
+    """Raised when integration configuration or canonical evidence is invalid."""

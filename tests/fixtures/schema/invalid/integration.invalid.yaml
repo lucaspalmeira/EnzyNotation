@@ -1,0 +1,4 @@
+schema_version: 1
+integration:
+  required: true
+  policy_id: invalid

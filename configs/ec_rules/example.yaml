@@ -1,0 +1,38 @@
+schema_version: 1
+ruleset:
+  id: generic-example-rules
+  version: "1"
+  description: Example only; replace with curated family and EC-specific rules
+  calibration:
+    status: heuristic
+    documentation: Not calibrated against a curated benchmark
+correlations: []
+conflict_policy:
+  candidate_disagreement: {severity: major, action: force_unresolved}
+  hierarchy_disagreement: {severity: major, action: force_unresolved}
+  required_feature_absent: {severity: major, action: force_unresolved}
+  forbidden_feature_present: {severity: major, action: force_unresolved}
+  sequence_structure_disagreement: {severity: major, action: force_unresolved}
+  curation_disagreement: {severity: major, action: force_unresolved}
+  rule_disagreement: {severity: major, action: force_unresolved}
+  provenance_inadequate: {severity: minor, action: retain}
+confidence_policy:
+  high: {minimum_independent_classes: 3, minimum_supporting_records: 1, maximum_conflicting_classes: 0, require_complete_ec: true, required_rule_ids: [required_domain]}
+  medium: {minimum_independent_classes: 2, minimum_supporting_records: 1, maximum_conflicting_classes: 0, require_complete_ec: false, required_rule_ids: []}
+  low: {minimum_independent_classes: 1, minimum_supporting_records: 1, maximum_conflicting_classes: 1, require_complete_ec: false, required_rule_ids: []}
+  unresolved: {on_major_conflict: true, on_tied_candidates: true, on_no_candidate: true, on_required_rule_failure: true}
+ec_rules:
+  - rule_id: example_required_domain
+    candidate_ec: 1.1.1.1
+    description: Illustrative EC-specific domain constraint
+    allow_partial_prediction: false
+    requirements:
+      all:
+        - condition_id: required_domain
+          evidence_classes: [domain_architecture]
+          effects: [supports]
+          record_statuses: [observed]
+          minimum_records: 1
+          minimum_independent_groups: 1
+      any: []
+      none: []

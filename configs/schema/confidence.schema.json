@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enzynotation.org/schema/v1/confidence.schema.json",
+  "title": "EnzyNotation heuristic confidence policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "policy_id", "policy_version", "calibration", "confidence"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "policy_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"},
+    "policy_version": {"type": "string", "minLength": 1},
+    "calibration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "documentation"],
+      "properties": {
+        "status": {"const": "heuristic"},
+        "documentation": {"type": "string", "minLength": 1}
+      }
+    },
+    "confidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["high", "medium", "low"],
+      "properties": {
+        "high": {"$ref": "#/$defs/gate"},
+        "medium": {"$ref": "#/$defs/gate"},
+        "low": {"$ref": "#/$defs/gate"}
+      }
+    }
+  },
+  "$defs": {
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "minimum_independent_classes",
+        "minimum_correlation_groups",
+        "required_evidence_classes",
+        "maximum_major_conflicts",
+        "maximum_minor_conflicts",
+        "allowed_completeness"
+      ],
+      "properties": {
+        "minimum_independent_classes": {"type": "integer", "minimum": 1},
+        "minimum_correlation_groups": {"type": "integer", "minimum": 1},
+        "required_evidence_classes": {
+          "type": "array",
+          "items": {"enum": ["sequence_homology", "learned_sequence_model", "domain_architecture", "catalytic_motif", "structure_homology", "curated_annotation", "user_assertion"]},
+          "uniqueItems": true
+        },
+        "maximum_major_conflicts": {"type": "integer", "minimum": 0},
+        "maximum_minor_conflicts": {"type": "integer", "minimum": 0},
+        "allowed_completeness": {
+          "type": "array",
+          "items": {"enum": ["complete", "partial"]},
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "required_rule_ids": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"},
+          "uniqueItems": true
+        },
+        "minimum_supporting_records": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "maximum_conflicting_classes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}
