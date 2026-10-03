@@ -7,7 +7,7 @@ of evidence rather than assigned from the first BLAST hit.
 
 ## Project status
 
-Milestones 0 through 8 are implemented. The repository currently provides:
+Milestones 0 through 9 are implemented. The repository currently provides:
 
 - an installable Python package and command-line interface;
 - layered YAML configuration;
@@ -44,10 +44,15 @@ Milestones 0 through 8 are implemented. The repository currently provides:
 - deterministic final TSV and schema-validated JSON reports;
 - a self-contained static HTML report with conflicts, correlation, provider
   availability, rule traces, and provenance;
+- a top-level Docker Compose deployment definition with opt-in core, CLEAN, and
+  Foldseek profiles and externally mounted scientific resources;
+- a schema-validated database/model registry with bounded deterministic
+  fingerprint verification and manifest generation;
 - unit tests and linting configuration.
 
-General containers, Slurm execution, benchmark calibration, and structure
-prediction are **not implemented yet**.
+Slurm/Apptainer execution, benchmark calibration, and structure prediction are
+**not implemented yet**. The Compose deployment is defined but intentionally
+not built or executed on this development computer.
 
 ## Requirements
 
@@ -75,6 +80,10 @@ managed externally. Selective pairwise confirmation requires an external
 `TMalign` executable. Supplied-structure validation itself requires neither.
 
 Development checks additionally use pytest, pytest-cov, and Ruff.
+
+Docker Compose 2.17 or newer is required only for the future server deployment
+because `compose.yaml` uses `build.dockerfile_inline`. Native execution does not
+require Docker.
 
 ## Installation
 
@@ -396,6 +405,49 @@ decisions produced by the integration layer. See
 [docs/reporting.md](docs/reporting.md) for file schemas, serialization rules,
 HTML safety, provenance, cache invalidation, and interpretation limits.
 
+## Docker Compose deployment
+
+`compose.yaml` is the preferred container orchestration entry point for future
+server deployment. It defines sibling `enzynotation`, `clean`, and `foldseek`
+services with `core`, `clean`, and `foldseek` profiles. Compose runs on the
+host; EnzyNotation never controls Docker, receives no Docker socket, and does
+not use Docker-in-Docker. Provider services are one-shot batch containers with
+no exposed ports or automatic restart.
+
+The EnzyNotation image is project-owned and will be built later by Compose on
+the target server. CLEAN and Foldseek retain their published external images.
+Inputs, results, logs, databases, models, and caches are bind-mounted using the
+paths in `.env.example`; databases and models are read-only. No large scientific
+resource is copied into an image.
+
+The older `docker/clean.compose.yml` and `docker/foldseek.compose.yml` adapters
+remain available for native backward compatibility. Native workflows remain
+fully supported. See [docs/containers.md](docs/containers.md) for profiles,
+mounts, server commands, security boundaries, and current sequencing limits.
+
+## Database resources
+
+Validate the external resource inventory without downloading or modifying it:
+
+```bash
+enzynotation databases verify --config configs/databases.yaml
+```
+
+Create a deterministic manifest at an explicit location:
+
+```bash
+enzynotation databases manifest \
+  --config configs/databases.yaml \
+  --output databases-manifest.json
+```
+
+The registry supports BLAST, annotation metadata, HMMER, InterPro, Foldseek,
+structural-reference, and model resources. Required and optional absence remain
+distinct. Fingerprinting can use an explicit version, an administrator value,
+one manifest, selected files, or bounded full SHA-256 for a small file. It never
+recursively hashes a large database. See
+[docs/databases.md](docs/databases.md) for the schema and lifecycle policy.
+
 ## Configuration
 
 Built-in defaults are mirrored in `configs/default.yaml`. One or more YAML
@@ -431,7 +483,8 @@ logging:
 
 The versioned contracts for pipeline, BLAST, CLEAN, HMMER, InterProScan,
 structures, Foldseek, TM-align, family, EC-rule, evidence, integration,
-confidence, report configuration, and final report documents are in
+confidence, report configuration, final report, and external-resource
+documents are in
 `configs/schema/`, with valid examples in
 `examples/configs/`.
 The current configuration loader validates the Milestone 1 fields shown above,
@@ -458,7 +511,7 @@ The Python API accepts complete and hierarchical partial EC numbers:
 from enzynotation.ec import normalize_ec
 
 normalize_ec("EC: 1.2.3.4")  # "1.2.3.4"
-normalize_ec("1.2")          # "1.2.-.-"
+normalize_ec("1.2")  # "1.2.-.-"
 ```
 
 Malformed identifiers, missing top-level classes, empty levels, non-positive
@@ -483,7 +536,8 @@ ruff format --check src tests
 ## Repository structure
 
 ```text
-configs/             Defaults, tool configurations, and JSON Schema contracts
+compose.yaml         Preferred future server container orchestration
+configs/             Defaults, tool configurations, resource registry, schemas
 docker/              CLEAN and Foldseek provider-specific Compose adapters
 docs/                Architecture, provider docs, contracts, and policy
 examples/configs/    Valid contract and implemented family examples
@@ -493,10 +547,10 @@ tests/               Unit, integration, CLI, fixture, and schema tests
 ```
 
 The workflow creates `results/` and `logs/` when run. Later milestones will add
-general container packaging, `slurm/`, `data/`, and `databases/` as required.
-The existing Compose files are provider-specific runtime adapters, not general
-EnzyNotation packaging. Large biological databases and model weights are not
-stored in the repository or embedded in EnzyNotation container images.
+`slurm/` and Apptainer/HPC orchestration as required. The top-level Compose file
+defines general server deployment; files under `docker/` remain
+provider-specific compatibility adapters. Large biological databases and model
+weights are not stored in the repository or embedded in images.
 
 ## Remaining pipeline work
 
@@ -506,10 +560,10 @@ transparent confidence categories (`high`, `medium`, `low`, and `unresolved`).
 The report layer deterministically presents those decisions as TSV, JSON, and
 static HTML without changing them.
 
-General Docker packaging will support local development. Apptainer/Singularity
-and dependency-aware Slurm jobs will support cluster execution. Until those
-milestones are implemented, only provider-specific CLEAN and Foldseek Compose
-adapters are supplied and no Slurm commands are available.
+Apptainer/Singularity and dependency-aware Slurm jobs remain for Milestone 10.
+No Slurm or Apptainer commands are currently available. Compose execution was
+deliberately deferred to the target server; Milestone 9 only defines and tests
+the deployment configuration statically.
 
 ## Architecture and data contracts
 
@@ -542,13 +596,17 @@ See:
   declarative rules, conflicts, categorical confidence, and final annotations.
 - `docs/reporting.md` for final TSV/JSON/HTML artifacts, deterministic
   serialization, provenance, and report interpretation.
+- `docs/containers.md` for top-level Compose services, profiles, mounts,
+  security, and future server deployment;
+- `docs/databases.md` for external resource registry verification and
+  deterministic manifests.
 
 The family schema is consumed by domain, motif, and integration stages. EC
 rules, integration policy, and confidence schemas are active contracts.
 BLASTp, CLEAN, HMMER/InterProScan domains, catalytic motifs, supplied
 structures, Foldseek, selective TM-align, and integration are available;
-final reporting is available, while general container and Slurm commands are
-not.
+final reporting, Compose definitions, and database verification are available;
+Slurm and Apptainer commands are not.
 
 ## Scientific and architectural policy
 

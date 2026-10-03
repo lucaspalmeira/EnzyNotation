@@ -8,17 +8,18 @@ them to a separate integration layer that may produce an EC-number prediction.
 The architecture is family-agnostic: enzyme-family and EC-specific knowledge is
 configuration, not Python control flow.
 
-Milestones 0 through 8 are currently implemented. The local execution core can
+Milestones 0 through 9 are currently implemented. The local execution core can
 run and resume validation plus opt-in BLASTp, CLEAN, HMMER/InterProScan domain,
 catalytic-motif, supplied-structure, Foldseek, and selective TM-align evidence
 stages. It can also run opt-in canonical evidence integration and produce a
 compact final annotation and deterministic final TSV, JSON, and static HTML
-reports. General container packaging, Slurm execution, and structure prediction
-remain for later milestones.
+reports. Top-level Docker Compose deployment and external-resource verification
+are defined for future server execution. Slurm, Apptainer, and structure
+prediction remain for later milestones.
 
 ## Architectural boundaries
 
-The pipeline is divided into six layers:
+The pipeline is divided into seven layers:
 
 1. **Input layer** validates FASTA, creates normalized sequences, and establishes
    unique query identifiers.
@@ -37,6 +38,9 @@ The pipeline is divided into six layers:
    conflicts, provenance, and final annotations without changing decisions.
 6. **Execution layer** runs the same stages locally or through Slurm. Execution
    backends may schedule work but may not alter scientific semantics.
+7. **Deployment layer** defines sibling Docker Compose services and external
+   mounts. It does not control Docker from application code or alter scientific
+   configuration.
 
 Providers never call the integration layer internally and never emit a final
 annotation. Parsers never discard a qualifying alternative solely because it
@@ -160,7 +164,7 @@ release identifier.
 
 ## Configuration model and precedence
 
-Configuration is split into six versioned document types:
+Configuration is split into seven versioned document types:
 
 - pipeline configuration controls input, output, execution, paths, tools, and
   resources;
@@ -171,9 +175,11 @@ Configuration is split into six versioned document types:
 - integration configuration maps canonical inputs to provider roles and defines
   EC specificity, inheritance, tie, and conflict behavior;
 - confidence configuration defines heuristic categorical gates independently
-  from provider-native scores.
+  from provider-native scores;
 - report configuration controls presentation only, such as the report title
-  and whether detailed evidence/provenance appears in HTML.
+  and whether detailed evidence/provenance appears in HTML;
+- database/resource configuration inventories external databases, metadata,
+  structures, models, roots, releases, and bounded fingerprints.
 
 Pipeline overlays use deterministic deep-merge precedence, from lowest to
 highest:
@@ -209,6 +215,25 @@ in the integration-stage signature. Milestone 8 adds `--report` and optional
 `--report-config`; integration outputs, canonical evidence, report schema,
 configuration, and template participate in the report signature without
 invalidating upstream provider stages.
+Milestone 9 adds the independent `configs/databases.yaml` registry and
+`compose.yaml`. Registry verification may produce a deterministic resource
+manifest but does not modify provider configuration or scientific resources.
+
+## Container deployment boundary
+
+Docker Compose runs on the target host and manages `enzynotation`, CLEAN, and
+Foldseek as sibling services. The application container has no Docker socket,
+Docker daemon, privileged mode, or internal container-control responsibility.
+All services share `/work/input`, `/work/results`, `/work/logs`, `/databases`,
+`/models`, and `/cache`; databases/models are read-only. Profiles keep batch
+providers opt-in, and no ports or service dependencies are needed because
+providers communicate through files.
+
+The project-owned core image has an inline future build definition. External
+CLEAN and Foldseek images are referenced, never rebuilt. Native workflows and
+the earlier provider-specific Compose adapters remain compatible. Container
+orchestration does not change filtering, evidence semantics, correlation,
+integration, or reporting.
 
 ## Evidence independence
 

@@ -10,6 +10,12 @@ from pathlib import Path
 
 from enzynotation import __version__
 from enzynotation.config import load_config
+from enzynotation.databases import (
+    build_database_manifest,
+    load_database_registry,
+    manifest_has_required_failures,
+    write_database_manifest,
+)
 from enzynotation.exceptions import EnzyNotationError
 from enzynotation.family import load_family_profile
 from enzynotation.fasta import (
@@ -71,6 +77,54 @@ def build_parser() -> argparse.ArgumentParser:
         "--output", type=Path, help="write normalized FASTA when validation succeeds"
     )
     validate.add_argument("--report", type=Path, help="write a JSON validation report")
+
+    databases = subparsers.add_parser(
+        "databases",
+        help="verify external scientific resources without downloading them",
+    )
+    database_actions = databases.add_subparsers(
+        dest="database_action",
+        required=True,
+    )
+
+    def add_database_options(command: argparse.ArgumentParser) -> None:
+        command.add_argument(
+            "--config",
+            type=Path,
+            default=Path("configs/databases.yaml"),
+            metavar="PATH",
+            help="external resource registry YAML",
+        )
+        command.add_argument(
+            "--database-root",
+            type=Path,
+            metavar="PATH",
+            help="override ENZYNOTATION_DB_ROOT for this verification",
+        )
+        command.add_argument(
+            "--model-root",
+            type=Path,
+            metavar="PATH",
+            help="override ENZYNOTATION_MODEL_ROOT for this verification",
+        )
+
+    verify_databases = database_actions.add_parser(
+        "verify",
+        help="print a deterministic resource verification manifest",
+    )
+    add_database_options(verify_databases)
+    database_manifest = database_actions.add_parser(
+        "manifest",
+        help="write a deterministic resource verification manifest",
+    )
+    add_database_options(database_manifest)
+    database_manifest.add_argument(
+        "--output",
+        type=Path,
+        required=True,
+        metavar="PATH",
+        help="manifest JSON destination outside read-only resource roots",
+    )
 
     run = subparsers.add_parser(
         "run",
@@ -348,6 +402,25 @@ def _run_pipeline(args: argparse.Namespace) -> int:
     return 0 if result.status is not RunStatus.FAILED else 1
 
 
+def _run_databases(args: argparse.Namespace) -> int:
+    registry = load_database_registry(args.config)
+    overrides = {
+        root_id: value
+        for root_id, value in (
+            ("databases", args.database_root),
+            ("models", args.model_root),
+        )
+        if value is not None
+    }
+    manifest = build_database_manifest(registry, root_overrides=overrides)
+    if args.database_action == "verify":
+        print(json.dumps(manifest, indent=2, sort_keys=True))
+    else:
+        write_database_manifest(args.output, manifest)
+        print(f"Database manifest: {args.output.resolve()}")
+    return 1 if manifest_has_required_failures(manifest) else 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the EnzyNotation command-line interface."""
 
@@ -356,6 +429,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         if args.command == "validate":
             return _run_validate(args)
+        if args.command == "databases":
+            return _run_databases(args)
         if args.command == "run":
             return _run_pipeline(args)
     except EnzyNotationError as exc:

@@ -1,0 +1,129 @@
+name: enzynotation
+
+services:
+  enzynotation:
+    profiles: [core]
+    image: "${ENZYNOTATION_IMAGE:-enzynotation:local}"
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+        RUN apt-get update \
+            && apt-get install --no-install-recommends -y bash ca-certificates hmmer ncbi-blast+ \
+            && rm -rf /var/lib/apt/lists/*
+        WORKDIR /opt/enzynotation
+        COPY pyproject.toml README.md ./
+        COPY src ./src
+        COPY configs ./configs
+        COPY scripts ./scripts
+        RUN python -m pip install --no-cache-dir .
+        ENTRYPOINT ["enzynotation"]
+    working_dir: /opt/enzynotation
+    read_only: true
+    restart: "no"
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    environment:
+      ENZYNOTATION_DB_ROOT: /databases
+      ENZYNOTATION_MODEL_ROOT: /models
+      ENZYNOTATION_CACHE_ROOT: /cache
+      ENZYNOTATION_RESULTS_ROOT: /work/results
+      ENZYNOTATION_LOGS_ROOT: /work/logs
+    volumes:
+      - type: bind
+        source: "${ENZYNOTATION_INPUT_ROOT:-./input}"
+        target: /work/input
+        read_only: true
+      - type: bind
+        source: "${ENZYNOTATION_RESULTS_ROOT:-./results}"
+        target: /work/results
+      - type: bind
+        source: "${ENZYNOTATION_LOGS_ROOT:-./logs}"
+        target: /work/logs
+      - type: bind
+        source: "${ENZYNOTATION_DB_ROOT:-./databases}"
+        target: /databases
+        read_only: true
+      - type: bind
+        source: "${ENZYNOTATION_MODEL_ROOT:-./models}"
+        target: /models
+        read_only: true
+      - type: bind
+        source: "${ENZYNOTATION_CACHE_ROOT:-./.cache/enzynotation}"
+        target: /cache
+
+  clean:
+    profiles: [clean]
+    image: "${CLEAN_IMAGE:-moleculemaker/clean-image-amd64}"
+    working_dir: /app
+    restart: "no"
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - type: bind
+        source: "${ENZYNOTATION_INPUT_ROOT:-./input}"
+        target: /work/input
+        read_only: true
+      - type: bind
+        source: "${ENZYNOTATION_RESULTS_ROOT:-./results}"
+        target: /work/results
+      - type: bind
+        source: "${ENZYNOTATION_LOGS_ROOT:-./logs}"
+        target: /work/logs
+      - type: bind
+        source: "${ENZYNOTATION_DB_ROOT:-./databases}"
+        target: /databases
+        read_only: true
+      - type: bind
+        source: "${ENZYNOTATION_MODEL_ROOT:-./models}"
+        target: /models
+        read_only: true
+      - type: bind
+        source: "${ENZYNOTATION_CACHE_ROOT:-./.cache/enzynotation}"
+        target: /cache
+      - type: bind
+        source: "${ENZYNOTATION_INPUT_ROOT:-./input}"
+        target: /app/data/inputs
+        read_only: true
+      - type: bind
+        source: "${ENZYNOTATION_RESULTS_ROOT:-./results}"
+        target: /app/results/inputs
+      - type: bind
+        source: "${ENZYNOTATION_CACHE_ROOT:-./.cache/enzynotation}/torch/hub/checkpoints"
+        target: /root/.cache/torch/hub/checkpoints
+
+  foldseek:
+    profiles: [foldseek]
+    image: "${FOLDSEEK_IMAGE:-ghcr.io/steineggerlab/foldseek:10-941cd33}"
+    working_dir: /work
+    restart: "no"
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - type: bind
+        source: "${ENZYNOTATION_INPUT_ROOT:-./input}"
+        target: /work/input
+        read_only: true
+      - type: bind
+        source: "${ENZYNOTATION_RESULTS_ROOT:-./results}"
+        target: /work/results
+      - type: bind
+        source: "${ENZYNOTATION_LOGS_ROOT:-./logs}"
+        target: /work/logs
+      - type: bind
+        source: "${ENZYNOTATION_DB_ROOT:-./databases}"
+        target: /databases
+        read_only: true
+      - type: bind
+        source: "${ENZYNOTATION_MODEL_ROOT:-./models}"
+        target: /models
+        read_only: true
+      - type: bind
+        source: "${ENZYNOTATION_CACHE_ROOT:-./.cache/enzynotation}"
+        target: /cache
+      - type: bind
+        source: "${ENZYNOTATION_CACHE_ROOT:-./.cache/enzynotation}/foldseek"
+        target: /work/tmp

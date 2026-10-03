@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enzynotation.org/schema/v1/databases.schema.json",
+  "title": "EnzyNotation external scientific resource registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "registry"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "registry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["roots", "resources"],
+      "properties": {
+        "roots": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {"$ref": "#/$defs/stableIdentifier"},
+          "additionalProperties": {"$ref": "#/$defs/resourceRoot"}
+        },
+        "resources": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/resource"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "stableIdentifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "resourceRoot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["environment_variable", "container_path"],
+      "properties": {
+        "environment_variable": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*$"
+        },
+        "container_path": {
+          "type": "string",
+          "pattern": "^/[^\\u0000]*$"
+        }
+      }
+    },
+    "fingerprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["strategy", "value"],
+      "properties": {
+        "strategy": {
+          "enum": [
+            "explicit_version",
+            "manifest_checksum",
+            "selected_file_checksums",
+            "administrator_supplied_fingerprint",
+            "full_sha256_for_small_file"
+          ]
+        },
+        "value": {"type": "string", "minLength": 1},
+        "manifest_path": {"type": "string", "minLength": 1},
+        "selected_files": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "maximum_bytes": {"type": "integer", "minimum": 1}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"strategy": {"const": "manifest_checksum"}}},
+          "then": {"required": ["manifest_path"]}
+        },
+        {
+          "if": {"properties": {"strategy": {"const": "selected_file_checksums"}}},
+          "then": {"required": ["selected_files"]}
+        },
+        {
+          "if": {"properties": {"strategy": {"const": "full_sha256_for_small_file"}}},
+          "then": {"required": ["maximum_bytes"]}
+        }
+      ]
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "url"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "url": {"type": ["string", "null"], "format": "uri"}
+      }
+    },
+    "license": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "url"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "url": {"type": ["string", "null"], "format": "uri"}
+      }
+    },
+    "resource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "resource_id",
+        "type",
+        "providers",
+        "root",
+        "path",
+        "version",
+        "fingerprint",
+        "required",
+        "metadata_path",
+        "read_only",
+        "source",
+        "license",
+        "citation"
+      ],
+      "properties": {
+        "resource_id": {"$ref": "#/$defs/stableIdentifier"},
+        "type": {
+          "enum": [
+            "blast_database",
+            "annotation_metadata",
+            "hmmer_database",
+            "interpro_resource",
+            "foldseek_database",
+            "structural_reference_directory",
+            "model_resource"
+          ]
+        },
+        "providers": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/stableIdentifier"}
+        },
+        "root": {"$ref": "#/$defs/stableIdentifier"},
+        "path": {"type": "string", "minLength": 1},
+        "version": {"type": "string", "minLength": 1},
+        "fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "required": {"type": "boolean"},
+        "metadata_path": {"type": ["string", "null"], "minLength": 1},
+        "read_only": {"type": "boolean"},
+        "source": {"$ref": "#/$defs/source"},
+        "license": {"$ref": "#/$defs/license"},
+        "citation": {"type": ["string", "null"], "minLength": 1}
+      }
+    }
+  }
+}

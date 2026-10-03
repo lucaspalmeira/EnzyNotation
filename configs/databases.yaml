@@ -1,0 +1,90 @@
+schema_version: 1
+registry:
+  roots:
+    databases:
+      environment_variable: ENZYNOTATION_DB_ROOT
+      container_path: /databases
+    models:
+      environment_variable: ENZYNOTATION_MODEL_ROOT
+      container_path: /models
+
+  resources:
+    - resource_id: curated_blast_proteins
+      type: blast_database
+      providers: [blastp]
+      root: databases
+      path: blast/curated_proteins
+      version: unknown
+      fingerprint:
+        strategy: explicit_version
+        value: unknown
+      required: false
+      metadata_path: blast/curated_proteins.tsv
+      read_only: true
+      source:
+        name: administrator-provided curated protein set
+        url: null
+      license:
+        name: source-dependent
+        url: null
+      citation: null
+
+    - resource_id: pfam_hmm
+      type: hmmer_database
+      providers: [hmmer]
+      root: databases
+      path: hmmer/Pfam-A.hmm
+      version: unknown
+      fingerprint:
+        strategy: explicit_version
+        value: unknown
+      required: false
+      metadata_path: null
+      read_only: true
+      source:
+        name: Pfam-compatible HMM library
+        url: null
+      license:
+        name: source-dependent
+        url: null
+      citation: null
+
+    - resource_id: curated_structures
+      type: foldseek_database
+      providers: [foldseek, tmalign]
+      root: databases
+      path: foldseek/curated_structures
+      version: unknown
+      fingerprint:
+        strategy: administrator_supplied_fingerprint
+        value: replace-on-server
+      required: false
+      metadata_path: foldseek/structure_metadata.tsv
+      read_only: true
+      source:
+        name: administrator-provided structural reference set
+        url: null
+      license:
+        name: source-dependent
+        url: null
+      citation: null
+
+    - resource_id: clean_models
+      type: model_resource
+      providers: [clean]
+      root: models
+      path: clean
+      version: unknown
+      fingerprint:
+        strategy: administrator_supplied_fingerprint
+        value: replace-on-server
+      required: false
+      metadata_path: null
+      read_only: true
+      source:
+        name: externally managed CLEAN model files
+        url: null
+      license:
+        name: CLEAN upstream terms
+        url: null
+      citation: null
