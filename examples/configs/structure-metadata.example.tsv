@@ -1,0 +1,4 @@
+structure_id	chain_id	protein_accession	protein_name	ec_numbers	annotation_status	source_database	database_version	structure_method	sequence_accession	structure_path	structure_format	model_index
+reference_001	A	P00001	Example curated enzyme	3.2.1.26	curated	custom_structures	2026-01	X-ray diffraction	P00001	/external/references/reference_001.pdb	pdb	1
+reference_002	B	P00002	Example multifunctional enzyme	1.1.1.1;2.7.-.-	reviewed	custom_structures	2026-01	cryo-EM	P00002	/external/references/reference_002.cif	mmcif	1
+reference_003			Unannotated structural reference		unannotated	custom_structures	2026-01	predicted				

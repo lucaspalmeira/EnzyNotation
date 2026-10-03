@@ -1,0 +1,20 @@
+services:
+  foldseek:
+    image: "${FOLDSEEK_IMAGE:-ghcr.io/steineggerlab/foldseek:10-941cd33}"
+    pull_policy: never
+    working_dir: /work
+    volumes:
+      - type: bind
+        source: "${FOLDSEEK_QUERY_DIR:?set FOLDSEEK_QUERY_DIR}"
+        target: /work/query
+        read_only: true
+      - type: bind
+        source: "${FOLDSEEK_DB_DIR:?set FOLDSEEK_DB_DIR}"
+        target: /database
+        read_only: true
+      - type: bind
+        source: "${FOLDSEEK_OUTPUT_DIR:?set FOLDSEEK_OUTPUT_DIR}"
+        target: /work/output
+      - type: bind
+        source: "${FOLDSEEK_TMP_DIR:?set FOLDSEEK_TMP_DIR}"
+        target: /work/tmp

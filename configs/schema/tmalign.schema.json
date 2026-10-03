@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enzynotation.org/schema/v1/tmalign.schema.json",
+  "title": "EnzyNotation TM-align provider configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "tmalign"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "tmalign": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "executable", "version_arguments", "selection", "thresholds_validated"],
+      "properties": {
+        "required": {"type": "boolean"},
+        "executable": {"type": "string", "minLength": 1},
+        "version_arguments": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "selection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["top_hits_per_query", "minimum_query_coverage", "minimum_target_coverage"],
+          "properties": {
+            "top_hits_per_query": {"type": ["integer", "null"], "minimum": 1},
+            "minimum_query_coverage": {"type": "number", "minimum": 0, "maximum": 1},
+            "minimum_target_coverage": {"type": "number", "minimum": 0, "maximum": 1}
+          }
+        },
+        "thresholds_validated": {"type": "boolean"}
+      }
+    }
+  }
+}

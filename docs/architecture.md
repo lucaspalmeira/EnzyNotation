@@ -8,12 +8,12 @@ them to a separate integration layer that may produce an EC-number prediction.
 The architecture is family-agnostic: enzyme-family and EC-specific knowledge is
 configuration, not Python control flow.
 
-Milestones 0 through 5 are currently implemented. The local execution core can
+Milestones 0 through 6 are currently implemented. The local execution core can
 run and resume validation plus opt-in BLASTp, CLEAN, HMMER/InterProScan domain,
-and catalytic-motif evidence stages. Other evidence providers, the integration
-engine, general container packaging, Slurm execution, and final reports
-described here remain contracts for later milestones and are not currently
-available.
+catalytic-motif, supplied-structure, Foldseek, and selective TM-align evidence
+stages. The integration engine, general container packaging, Slurm execution,
+structure prediction, and final reports described here remain contracts for
+later milestones and are not currently available.
 
 ## Architectural boundaries
 
@@ -21,14 +21,14 @@ The pipeline is divided into six layers:
 
 1. **Input layer** validates FASTA, creates normalized sequences, and establishes
    unique query identifiers.
-2. **Provider layer** invokes tools such as BLASTp, CLEAN, HMMER, InterProScan,
-   Foldseek, and TM-align, or evaluates configured catalytic motifs. BLASTp,
-   CLEAN, HMMER, optional InterProScan, and catalytic motifs are currently
-   implemented.
+2. **Provider layer** invokes BLASTp, CLEAN, HMMER, InterProScan, Foldseek, and
+   TM-align, or evaluates configured catalytic motifs. All are implemented;
+   structural execution is limited to user-supplied structures, Docker
+   Foldseek, and external TM-align.
 3. **Parser layer** preserves raw output and converts provider-specific results
    into canonical evidence records. BLAST, CLEAN CSV, HMMER domtblout,
-   InterProScan TSV, curated BLAST metadata, and motif normalization are
-   currently implemented.
+   InterProScan TSV, curated BLAST/structure metadata, motif normalization,
+   Foldseek TSV, and labeled TM-align output are currently implemented.
 4. **Integration layer** evaluates candidates, correlations, family rules,
    EC-specific rules, conflicts, and confidence. It is the only layer allowed
    to make a final EC prediction.
@@ -182,6 +182,10 @@ selected by `--blast-config`. Milestone 4 adds HMMER and InterProScan provider
 documents plus a family profile selected by `--family-config`. Provider and
 family snapshots and digests participate in stage signatures. Milestone 5 adds
 a separately versioned CLEAN provider document selected by `--clean-config`.
+Milestone 6 adds independent structure-mapping, Foldseek, and TM-align documents
+selected by `--structures-config`, `--foldseek-config`, and
+`--tmalign-config`. Their resolved values and structural inputs participate in
+stage signatures.
 EC-rule documents are not yet loaded.
 
 ## Evidence independence

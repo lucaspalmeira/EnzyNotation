@@ -7,15 +7,16 @@ of evidence rather than assigned from the first BLAST hit.
 
 ## Project status
 
-Milestones 0 through 5 are implemented. The repository currently provides:
+Milestones 0 through 6 are implemented. The repository currently provides:
 
 - an installable Python package and command-line interface;
 - layered YAML configuration;
 - protein FASTA validation and normalization;
 - EC-number parsing and normalization;
 - machine-readable validation reports;
-- versioned JSON Schema contracts for pipeline, BLAST, HMMER, InterProScan,
-  family, EC-rule, and evidence documents;
+- versioned JSON Schema contracts for pipeline, BLAST, CLEAN, HMMER,
+  InterProScan, structures, Foldseek, TM-align, family, EC-rule, and evidence
+  documents;
 - documented architecture and scientific inference policy;
 - a validation-only local workflow with manifests and resumable stage state;
 - content-based input/configuration invalidation and atomic stage completion;
@@ -32,11 +33,15 @@ Milestones 0 through 5 are implemented. The repository currently provides:
 - opt-in CLEAN execution through Docker Compose or an external command;
 - explicit CLEAN distance, GMM-estimate, and opaque-score semantics;
 - canonical, correlated CLEAN candidate evidence without final EC assignment;
+- explicit user-supplied PDB/mmCIF mapping with chain/model validation;
+- broad Foldseek search through an official-image Docker Compose adapter;
+- selective external TM-align confirmation preserving both TM-score directions;
+- explicit structural-reference metadata and correlated canonical evidence;
 - unit tests and linting configuration.
 
-Structure evidence providers, evidence integration, final EC prediction,
-confidence classification, final annotation reports, general containers, and
-Slurm execution are planned but are **not implemented yet**.
+Evidence integration, final EC prediction, confidence classification, final
+annotation reports, general containers, and Slurm execution are planned but
+are **not implemented yet**. Structure prediction is also not implemented.
 
 ## Requirements
 
@@ -57,6 +62,11 @@ CLEAN evidence uses an externally managed CLEAN runtime. Docker Compose with
 command strategy supports environments managed through Conda, wrappers, or a
 future Apptainer command. CLEAN, model weights, ESM weights, and Docker Python
 libraries are not package dependencies and are not distributed here.
+
+Structural search uses Docker Compose and the official Foldseek image
+`ghcr.io/steineggerlab/foldseek:10-941cd33`; the image and database must be
+managed externally. Selective pairwise confirmation requires an external
+`TMalign` executable. Supplied-structure validation itself requires neither.
 
 Development checks additionally use pytest, pytest-cov, and Ruff.
 
@@ -281,6 +291,41 @@ conflict-handling layer. See [docs/clean.md](docs/clean.md) for runtime setup,
 licensing, mounts, filtering, outputs, score interpretation, failure semantics,
 and limitations.
 
+## Structural evidence
+
+Map user-supplied PDB or mmCIF structures, then optionally run Foldseek and
+selective TM-align:
+
+```bash
+enzynotation run proteins.fasta \
+  --run-id structural-example \
+  --structures-config examples/configs/structures.example.yaml \
+  --foldseek-config configs/tools/foldseek.yaml \
+  --tmalign-config configs/tools/tmalign.yaml
+```
+
+The query manifest explicitly maps FASTA IDs to structure paths, formats,
+chains, models, and sources. Foldseek uses an ephemeral
+`docker compose run --rm` invocation with read-only query/database mounts and
+writable output/temp mounts. Its external structure database is separate from
+the curated reference metadata TSV. TM-align runs only for configured retained
+Foldseek candidates, with the EnzyNotation query as Structure 1.
+
+Raw and normalized results are preserved under `stages/structures/`,
+`stages/foldseek/`, and `stages/tmalign/`; canonical records are written to
+`evidence/foldseek_evidence.jsonl` and `evidence/tmalign_evidence.jsonl`.
+Overlapping Foldseek intervals use union coverage. Both query-normalized and
+target-normalized TM-scores are preserved.
+
+Foldseek rank never assigns EC, structural similarity alone is insufficient for
+fine-grained EC inference, and a high TM-score is not functional confidence.
+Foldseek and TM-align records for the same pair share one structural correlation
+group. Every structural summary has `final_ec_prediction: null`.
+
+See [docs/structural-evidence.md](docs/structural-evidence.md) for manifests,
+metadata, image/database configuration, fields, filters, outputs, provenance,
+cache invalidation, failure states, and scientific limits.
+
 ## Configuration
 
 Built-in defaults are mirrored in `configs/default.yaml`. One or more YAML
@@ -315,8 +360,8 @@ logging:
 ```
 
 The versioned contracts for pipeline, BLAST, CLEAN, HMMER, InterProScan,
-family, EC-rule, and evidence documents are in `configs/schema/`, with valid
-examples in `examples/configs/`.
+structures, Foldseek, TM-align, family, EC-rule, and evidence documents are in
+`configs/schema/`, with valid examples in `examples/configs/`.
 The current configuration loader validates the Milestone 1 fields shown above,
 and the local runner additionally honors `pipeline.run_id` when present. BLAST
 and CLEAN load separate versioned provider documents when their CLI options are
@@ -366,7 +411,7 @@ ruff format --check src tests
 
 ```text
 configs/             Defaults, tool configurations, and JSON Schema contracts
-docker/              CLEAN provider-specific Compose adapter
+docker/              CLEAN and Foldseek provider-specific Compose adapters
 docs/                Architecture, provider docs, contracts, and policy
 examples/configs/    Valid contract and implemented family examples
 scripts/             External database setup helpers
@@ -376,22 +421,21 @@ tests/               Unit, integration, CLI, fixture, and schema tests
 
 The workflow creates `results/` and `logs/` when run. Later milestones will add
 general container packaging, `slurm/`, `data/`, and `databases/` as required.
-The existing `docker/clean.compose.yml` is only a CLEAN runtime adapter. Large
-biological databases and model weights will not be stored in the repository or
-embedded in EnzyNotation container images.
+The existing Compose files are provider-specific runtime adapters, not general
+EnzyNotation packaging. Large biological databases and model weights are not
+stored in the repository or embedded in EnzyNotation container images.
 
 ## Planned pipeline
 
-Later milestones will add independent adapters for Foldseek and TM-align. Their
-raw results will join the implemented BLAST, CLEAN, domain, and motif evidence
-before a separate inference layer evaluates candidate EC numbers, conflicting
-evidence, and transparent confidence categories (`high`, `medium`, `low`, and
-`unresolved`).
+The implemented BLAST, CLEAN, domain, motif, Foldseek, and TM-align evidence
+will feed a later, separate inference layer that evaluates candidate EC
+numbers, conflicting evidence, and transparent confidence categories (`high`,
+`medium`, `low`, and `unresolved`).
 
 General Docker packaging will support local development. Apptainer/Singularity
 and dependency-aware Slurm jobs will support cluster execution. Until those
-milestones are implemented, the CLEAN-specific Compose adapter is the only
-container command supplied and no Slurm commands are available.
+milestones are implemented, only provider-specific CLEAN and Foldseek Compose
+adapters are supplied and no Slurm commands are available.
 
 ## Architecture and data contracts
 
@@ -417,13 +461,15 @@ See:
   policies;
 - `docs/domains-and-motifs.md` for the implemented Milestone 4 providers and
   family-profile syntax;
-- `docs/clean.md` for the implemented Milestone 5 provider and score semantics.
+- `docs/clean.md` for the implemented Milestone 5 provider and score semantics;
+- `docs/structural-evidence.md` for implemented Milestone 6 structure mapping,
+  Foldseek, TM-align, and correlation semantics.
 
 The family schema is consumed by implemented domain and motif stages. EC
 integration, confidence, and reporting schemas remain contracts for upcoming
-implementations. BLASTp, CLEAN, HMMER/InterProScan domain evidence, and
-catalytic motif analysis are available; structure, integration, reporting,
-general container, and Slurm commands are not.
+implementations. BLASTp, CLEAN, HMMER/InterProScan domains, catalytic motifs,
+supplied structures, Foldseek, and selective TM-align are available;
+integration, reporting, general container, and Slurm commands are not.
 
 ## Scientific and architectural policy
 

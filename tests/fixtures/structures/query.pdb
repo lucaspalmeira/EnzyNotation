@@ -1,0 +1,11 @@
+MODEL        1
+ATOM      1  CA  MET A   1      11.000  12.000  13.000  1.00 20.00           C
+ATOM      2  CA  ALA A   2      12.000  12.000  13.000  1.00 20.00           C
+ATOM      3  CA  GLY A   3      13.000  12.000  13.000  1.00 20.00           C
+ATOM      4  CA  GLY B   1      14.000  12.000  13.000  1.00 20.00           C
+ENDMDL
+MODEL        2
+ATOM      5  CA  THR A   1      11.000  13.000  13.000  1.00 20.00           C
+ATOM      6  CA  TYR A   2      12.000  13.000  13.000  1.00 20.00           C
+ENDMDL
+END

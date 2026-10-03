@@ -1,0 +1,3 @@
+query_id	structure_id	structure_path	structure_format	chain_id	model_index	structure_source	structure_source_version	prediction_method	prediction_model_version	sequence_sha256	quality_metadata
+query_001	query_001_structure	/external/structures/query_001.pdb	pdb	A	1	user_supplied					
+query_002	query_002_external_model	/external/structures/query_002.cif	mmcif	A	1	externally_predicted	2026-01	external_method	model-v1		{"quality_score":0.8}

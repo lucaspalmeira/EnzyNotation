@@ -1,0 +1,30 @@
+schema_version: 1
+foldseek:
+  required: false
+  execution:
+    strategy: docker_compose
+    docker_compose:
+      docker_executable: docker
+      compose_file: docker/foldseek.compose.yml
+      service: foldseek
+      image: ghcr.io/steineggerlab/foldseek:10-941cd33
+      image_digest: null
+  database:
+    path: /external/foldseek/database
+    name: curated_structures
+    version: unknown
+    fingerprint: null
+    metadata: /external/foldseek/structure_metadata.tsv
+  parameters:
+    cpus: 8
+    evalue: 1.0e-3
+    max_seqs: 100
+    sensitivity: null
+  filters:
+    maximum_evalue: 1.0e-3
+    minimum_query_coverage: 0.0
+    minimum_target_coverage: 0.0
+    minimum_aligned_length: 1
+    maximum_retained_hits_per_query: null
+    threshold_status: operational
+  software_version: 10-941cd33

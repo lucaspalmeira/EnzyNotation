@@ -1,0 +1,10 @@
+schema_version: 1
+tmalign:
+  required: false
+  executable: TMalign
+  version_arguments: []
+  selection:
+    top_hits_per_query: 0
+    minimum_query_coverage: 0.0
+    minimum_target_coverage: 0.0
+  thresholds_validated: false

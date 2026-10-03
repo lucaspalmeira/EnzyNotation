@@ -1,0 +1,2 @@
+Name of Chain_1: query.pdb
+TM-score= 0.80000 (if normalized by length of Chain_1)

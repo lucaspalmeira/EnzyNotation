@@ -22,13 +22,19 @@ from enzynotation.runner import PipelineRunner
 from enzynotation.stages.blast import BlastStage
 from enzynotation.stages.clean import CleanStage
 from enzynotation.stages.domains import DomainsStage
+from enzynotation.stages.foldseek import FoldseekStage
 from enzynotation.stages.motifs import MotifsStage
+from enzynotation.stages.structures import StructuresStage
+from enzynotation.stages.tmalign import TMAlignStage
 from enzynotation.stages.validate import ValidationStage
 from enzynotation.state import RunStatus
+from enzynotation.structure_mapping import load_structures_config
 from enzynotation.tools.blast import load_blast_config
 from enzynotation.tools.clean import load_clean_config
+from enzynotation.tools.foldseek import load_foldseek_config
 from enzynotation.tools.hmmer import load_hmmer_config
 from enzynotation.tools.interpro import load_interpro_config
+from enzynotation.tools.tmalign import load_tmalign_config
 from enzynotation.workflow import Workflow
 
 LOGGER = logging.getLogger(__name__)
@@ -63,9 +69,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     run = subparsers.add_parser(
         "run",
-        help=(
-            "run validation with optional sequence, model, domain, and motif evidence"
-        ),
+        help="run validation with optional evidence-provider stages",
     )
     run.add_argument("input", type=Path, help="input protein FASTA")
     run.add_argument(
@@ -128,6 +132,24 @@ def build_parser() -> argparse.ArgumentParser:
         "--motifs",
         action="store_true",
         help="enable catalytic motif analysis from the family profile",
+    )
+    run.add_argument(
+        "--structures-config",
+        type=Path,
+        metavar="PATH",
+        help="validate and stage supplied structures from this YAML configuration",
+    )
+    run.add_argument(
+        "--foldseek-config",
+        type=Path,
+        metavar="PATH",
+        help="enable Foldseek structural evidence with this YAML configuration",
+    )
+    run.add_argument(
+        "--tmalign-config",
+        type=Path,
+        metavar="PATH",
+        help="enable selective TM-align evidence with this YAML configuration",
     )
     return parser
 
@@ -231,6 +253,23 @@ def _run_pipeline(args: argparse.Namespace) -> int:
     if args.motifs:
         assert profile is not None
         stages.append(MotifsStage(profile))
+    if args.foldseek_config is not None and args.structures_config is None:
+        raise EnzyNotationError(
+            "--structures-config is required with --foldseek-config"
+        )
+    if args.tmalign_config is not None and args.foldseek_config is None:
+        raise EnzyNotationError("--foldseek-config is required with --tmalign-config")
+    foldseek_config = None
+    if args.structures_config is not None:
+        structures_config = load_structures_config(args.structures_config)
+        stages.append(StructuresStage(structures_config))
+    if args.foldseek_config is not None:
+        foldseek_config = load_foldseek_config(args.foldseek_config)
+        stages.append(FoldseekStage(foldseek_config))
+    if args.tmalign_config is not None:
+        assert foldseek_config is not None
+        tmalign_config = load_tmalign_config(args.tmalign_config)
+        stages.append(TMAlignStage(tmalign_config, foldseek=foldseek_config))
     workflow = Workflow(stages) if len(stages) > 1 else None
     result = runner.run(
         args.input,

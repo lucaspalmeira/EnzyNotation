@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enzynotation.org/schema/v1/structures.schema.json",
+  "title": "EnzyNotation supplied-structure configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "structures"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "structures": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "manifest"],
+      "properties": {
+        "required": {"type": "boolean"},
+        "manifest": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

@@ -1,0 +1,4 @@
+schema_version: 1
+structures:
+  required: false
+  manifest: examples/configs/structure-manifest.example.tsv

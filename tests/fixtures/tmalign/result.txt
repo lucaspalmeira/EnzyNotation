@@ -1,0 +1,7 @@
+Name of Chain_1: query.pdb
+Name of Chain_2: reference.pdb
+Length of Chain_1: 100 residues
+Length of Chain_2: 120 residues
+Aligned length= 80, RMSD= 1.50, Seq_ID=n_identical/n_aligned= 0.250
+TM-score= 0.80000 (if normalized by length of Chain_1, i.e., LN=100, d0=4.50)
+TM-score= 0.70000 (if normalized by length of Chain_2, i.e., LN=120, d0=5.00)

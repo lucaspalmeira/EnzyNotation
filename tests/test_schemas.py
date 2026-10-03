@@ -17,6 +17,21 @@ EXAMPLE_DIRECTORY = Path("examples/configs")
 INVALID_DIRECTORY = Path("tests/fixtures/schema/invalid")
 
 CONTRACTS = {
+    "structures": (
+        SCHEMA_DIRECTORY / "structures.schema.json",
+        EXAMPLE_DIRECTORY / "structures.example.yaml",
+        INVALID_DIRECTORY / "structures.invalid.yaml",
+    ),
+    "foldseek": (
+        SCHEMA_DIRECTORY / "foldseek.schema.json",
+        Path("configs/tools/foldseek.yaml"),
+        INVALID_DIRECTORY / "foldseek.invalid.yaml",
+    ),
+    "tmalign": (
+        SCHEMA_DIRECTORY / "tmalign.schema.json",
+        Path("configs/tools/tmalign.yaml"),
+        INVALID_DIRECTORY / "tmalign.invalid.yaml",
+    ),
     "clean": (
         SCHEMA_DIRECTORY / "clean.schema.json",
         EXAMPLE_DIRECTORY / "clean.example.yaml",

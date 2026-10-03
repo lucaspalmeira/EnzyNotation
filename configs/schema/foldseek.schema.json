@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enzynotation.org/schema/v1/foldseek.schema.json",
+  "title": "EnzyNotation Foldseek provider configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "foldseek"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "foldseek": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "execution", "database", "parameters", "filters", "software_version"],
+      "properties": {
+        "required": {"type": "boolean"},
+        "execution": {"$ref": "#/$defs/execution"},
+        "database": {"$ref": "#/$defs/database"},
+        "parameters": {"$ref": "#/$defs/parameters"},
+        "filters": {"$ref": "#/$defs/filters"},
+        "software_version": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {"type": "string", "minLength": 1},
+    "nullablePath": {"oneOf": [{"$ref": "#/$defs/nonEmptyString"}, {"type": "null"}]},
+    "fraction": {"type": "number", "minimum": 0, "maximum": 1},
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["strategy", "docker_compose"],
+      "properties": {
+        "strategy": {"const": "docker_compose"},
+        "docker_compose": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["docker_executable", "compose_file", "service", "image", "image_digest"],
+          "properties": {
+            "docker_executable": {"$ref": "#/$defs/nonEmptyString"},
+            "compose_file": {"$ref": "#/$defs/nonEmptyString"},
+            "service": {"$ref": "#/$defs/nonEmptyString"},
+            "image": {"$ref": "#/$defs/nonEmptyString"},
+            "image_digest": {
+              "oneOf": [
+                {"type": "string", "pattern": "^sha256:[a-fA-F0-9]+$"},
+                {"type": "null"}
+              ]
+            }
+          }
+        }
+      }
+    },
+    "database": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "name", "version", "fingerprint", "metadata"],
+      "properties": {
+        "path": {"$ref": "#/$defs/nonEmptyString"},
+        "name": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"},
+        "version": {"$ref": "#/$defs/nonEmptyString"},
+        "fingerprint": {"$ref": "#/$defs/nullablePath"},
+        "metadata": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cpus", "evalue", "max_seqs", "sensitivity"],
+      "properties": {
+        "cpus": {"type": "integer", "minimum": 1},
+        "evalue": {"type": "number", "minimum": 0},
+        "max_seqs": {"type": "integer", "minimum": 1},
+        "sensitivity": {"type": ["number", "null"], "minimum": 0}
+      }
+    },
+    "filters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maximum_evalue", "minimum_query_coverage", "minimum_target_coverage", "minimum_aligned_length", "maximum_retained_hits_per_query", "threshold_status"],
+      "properties": {
+        "maximum_evalue": {"type": "number", "minimum": 0},
+        "minimum_query_coverage": {"$ref": "#/$defs/fraction"},
+        "minimum_target_coverage": {"$ref": "#/$defs/fraction"},
+        "minimum_aligned_length": {"type": "integer", "minimum": 1},
+        "maximum_retained_hits_per_query": {"type": ["integer", "null"], "minimum": 1},
+        "threshold_status": {"enum": ["operational", "externally_documented", "empirically_calibrated"]}
+      }
+    }
+  }
+}
