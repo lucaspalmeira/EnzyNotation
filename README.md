@@ -7,7 +7,7 @@ of evidence rather than assigned from the first BLAST hit.
 
 ## Project status
 
-Milestones 0 through 9 are implemented. The repository currently provides:
+Milestones 0 through 10 are implemented. The repository currently provides:
 
 - an installable Python package and command-line interface;
 - layered YAML configuration;
@@ -48,11 +48,19 @@ Milestones 0 through 9 are implemented. The repository currently provides:
   Foldseek profiles and externally mounted scientific resources;
 - a schema-validated database/model registry with bounded deterministic
   fingerprint verification and manifest generation;
+- dependency-aware Slurm planning and submission with stage-specific resources,
+  separate logs, scheduler provenance, resumability, and reviewable dry-runs;
+- an Apptainer definition with external database/model bind mounts and the same
+  logical filesystem contract used by Docker Compose;
+- a native/Slurm-parity synthetic E2E scenario covering exact, partial, and
+  unresolved conflict outcomes;
+- lightweight CI and documented release gates;
 - unit tests and linting configuration.
 
-Slurm/Apptainer execution, benchmark calibration, and structure prediction are
-**not implemented yet**. The Compose deployment is defined but intentionally
-not built or executed on this development computer.
+Benchmark calibration and structure prediction are **not implemented**.
+Compose deployment is defined but was intentionally not built or executed on
+this development computer. Real Slurm/Apptainer deployment remains a target
+cluster validation activity.
 
 ## Requirements
 
@@ -74,10 +82,12 @@ command strategy supports environments managed through Conda, wrappers, or a
 future Apptainer command. CLEAN, model weights, ESM weights, and Docker Python
 libraries are not package dependencies and are not distributed here.
 
-Structural search uses Docker Compose and the official Foldseek image
-`ghcr.io/steineggerlab/foldseek:10-941cd33`; the image and database must be
-managed externally. Selective pairwise confirmation requires an external
-`TMalign` executable. Supplied-structure validation itself requires neither.
+Structural search uses Docker Compose with the official Foldseek image
+`ghcr.io/steineggerlab/foldseek:10-941cd33`, or an HPC `command` strategy that
+can use native Foldseek or an administrator-managed Apptainer wrapper. The
+image and database remain external. Selective pairwise confirmation requires
+an external `TMalign` executable. Supplied-structure validation itself requires
+neither.
 
 Development checks additionally use pytest, pytest-cov, and Ruff.
 
@@ -502,6 +512,31 @@ pipeline overlays.
 
 Family-specific motifs, EC rules, tool paths, database locations, thresholds,
 and compute resources remain configuration rather than hardcoded Python logic.
+The complete precedence and contract map is in
+[docs/configuration.md](docs/configuration.md).
+
+## Slurm and HPC
+
+Local execution remains the default. Review the scheduler DAG without calling
+`sbatch`:
+
+```bash
+enzynotation run proteins.fasta \
+  --run-id cluster-review \
+  --backend slurm \
+  --slurm-config configs/slurm/default.yaml \
+  --dry-run
+```
+
+Remove `--dry-run` only on the target cluster. Slurm uses one job per pipeline
+stage, `afterok` for required scientific dependencies, and separate `%j`
+stdout/stderr logs. Optional providers are awaited before integration without
+being converted into mandatory evidence. See [docs/slurm.md](docs/slurm.md).
+
+The Apptainer definition preserves `/work/input`, `/work/results`,
+`/work/logs`, `/databases`, `/models`, and `/cache`. Databases, models, and user
+data must be bind-mounted and are never embedded. See
+[docs/apptainer.md](docs/apptainer.md).
 
 ## EC normalization
 
@@ -537,22 +572,23 @@ ruff format --check src tests
 
 ```text
 compose.yaml         Preferred future server container orchestration
+apptainer/           HPC runtime definition without scientific resources
 configs/             Defaults, tool configurations, resource registry, schemas
 docker/              CLEAN and Foldseek provider-specific Compose adapters
 docs/                Architecture, provider docs, contracts, and policy
 examples/configs/    Valid contract and implemented family examples
 scripts/             External database setup helpers
+slurm/               Generic stage job and thin submission wrapper
 src/enzynotation/    Python package, parsers, stages, tools, and local backend
-tests/               Unit, integration, CLI, fixture, and schema tests
+tests/               Unit, synthetic E2E, CLI, fixture, and schema tests
 ```
 
-The workflow creates `results/` and `logs/` when run. Later milestones will add
-`slurm/` and Apptainer/HPC orchestration as required. The top-level Compose file
+The workflow creates `results/` and `logs/` when run. The top-level Compose file
 defines general server deployment; files under `docker/` remain
 provider-specific compatibility adapters. Large biological databases and model
 weights are not stored in the repository or embedded in images.
 
-## Remaining pipeline work
+## Operational status and future validation
 
 The implemented integration layer evaluates canonical BLAST, CLEAN, domain,
 motif, Foldseek, and TM-align evidence into EC candidates, conflicts, and
@@ -560,10 +596,11 @@ transparent confidence categories (`high`, `medium`, `low`, and `unresolved`).
 The report layer deterministically presents those decisions as TSV, JSON, and
 static HTML without changing them.
 
-Apptainer/Singularity and dependency-aware Slurm jobs remain for Milestone 10.
-No Slurm or Apptainer commands are currently available. Compose execution was
-deliberately deferred to the target server; Milestone 9 only defines and tests
-the deployment configuration statically.
+Dependency-aware Slurm submission, dry-run inspection, shared-storage
+execution, and an Apptainer definition are implemented. Scheduler submissions
+and Apptainer builds were deliberately not run on this development machine.
+The remaining scientific work is a future curated benchmark, threshold
+evaluation, confidence calibration, and sensitivity/specificity analysis.
 
 ## Architecture and data contracts
 
@@ -600,13 +637,18 @@ See:
   security, and future server deployment;
 - `docs/databases.md` for external resource registry verification and
   deterministic manifests.
+- `docs/configuration.md` for configuration layers and precedence;
+- `docs/slurm.md` and `docs/apptainer.md` for cluster operation;
+- `docs/adding-families.md` and `docs/troubleshooting.md` for extension and
+  operational diagnostics;
+- `docs/release.md` for release gates and the benchmark roadmap.
 
 The family schema is consumed by domain, motif, and integration stages. EC
 rules, integration policy, and confidence schemas are active contracts.
 BLASTp, CLEAN, HMMER/InterProScan domains, catalytic motifs, supplied
 structures, Foldseek, selective TM-align, and integration are available;
-final reporting, Compose definitions, and database verification are available;
-Slurm and Apptainer commands are not.
+final reporting, Compose definitions, database verification, Slurm planning,
+and Apptainer packaging definitions are available.
 
 ## Scientific and architectural policy
 

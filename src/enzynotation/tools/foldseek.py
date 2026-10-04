@@ -34,6 +34,15 @@ class FoldseekDockerConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class FoldseekCommandConfig:
+    """Native or administrator-wrapped Foldseek command for HPC."""
+
+    prefix: tuple[str, ...]
+    executable: str
+    version_arguments: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class FoldseekDatabaseConfig:
     path: Path
     name: str
@@ -53,7 +62,9 @@ class FoldseekParameters:
 @dataclass(frozen=True, slots=True)
 class FoldseekConfig:
     required: bool
-    docker: FoldseekDockerConfig
+    strategy: str
+    docker: FoldseekDockerConfig | None
+    command: FoldseekCommandConfig | None
     database: FoldseekDatabaseConfig
     parameters: FoldseekParameters
     filters: FoldseekFilterSettings
@@ -63,14 +74,27 @@ class FoldseekConfig:
         return {
             "required": self.required,
             "execution": {
-                "strategy": "docker_compose",
-                "docker_compose": {
-                    "docker_executable": self.docker.docker_executable,
-                    "compose_file": str(self.docker.compose_file),
-                    "service": self.docker.service,
-                    "image": self.docker.image,
-                    "image_digest": self.docker.image_digest,
-                },
+                "strategy": self.strategy,
+                "docker_compose": (
+                    {
+                        "docker_executable": self.docker.docker_executable,
+                        "compose_file": str(self.docker.compose_file),
+                        "service": self.docker.service,
+                        "image": self.docker.image,
+                        "image_digest": self.docker.image_digest,
+                    }
+                    if self.docker is not None
+                    else None
+                ),
+                "command": (
+                    {
+                        "prefix": list(self.command.prefix),
+                        "executable": self.command.executable,
+                        "version_arguments": list(self.command.version_arguments),
+                    }
+                    if self.command is not None
+                    else None
+                ),
             },
             "database": {
                 "path": str(self.database.path),
@@ -152,38 +176,76 @@ def foldseek_config_from_mapping(value: dict[str, Any]) -> FoldseekConfig:
         raise ToolConfigurationError("Foldseek schema_version must be 1")
     section = _mapping(value.get("foldseek"), "foldseek")
     execution = _mapping(section.get("execution"), "foldseek.execution")
-    if execution.get("strategy") != "docker_compose":
-        raise ToolConfigurationError("Foldseek strategy must be docker_compose")
-    docker = _mapping(
-        execution.get("docker_compose"), "foldseek.execution.docker_compose"
-    )
+    strategy = execution.get("strategy")
+    if strategy not in {"docker_compose", "command"}:
+        raise ToolConfigurationError(
+            "Foldseek strategy must be docker_compose or command"
+        )
     database = _mapping(section.get("database"), "foldseek.database")
     parameters = _mapping(section.get("parameters"), "foldseek.parameters")
     filters = _mapping(section.get("filters"), "foldseek.filters")
     required = section.get("required")
     if not isinstance(required, bool):
         raise ToolConfigurationError("foldseek.required must be a boolean")
-    digest = _string(
-        docker.get("image_digest"),
-        "foldseek.execution.docker_compose.image_digest",
-        nullable=True,
-    )
-    if digest is not None and not re.fullmatch(r"sha256:[a-fA-F0-9]+", digest):
-        raise ToolConfigurationError("Foldseek image_digest must use sha256:<hex>")
-    image = str(_string(docker.get("image"), "foldseek image"))
-    if digest is not None and "@" in image:
-        raise ToolConfigurationError("Foldseek image and image_digest overlap")
-    image_override = os.environ.get("FOLDSEEK_IMAGE", "").strip()
-    if image_override:
-        if "@" in image_override:
-            image, digest = image_override.rsplit("@", maxsplit=1)
-            if not image or not re.fullmatch(r"sha256:[a-fA-F0-9]+", digest):
-                raise ToolConfigurationError(
-                    "FOLDSEEK_IMAGE digest reference must use image@sha256:..."
-                )
-        else:
-            image = image_override
-            digest = None
+    docker_config = None
+    command_config = None
+    if strategy == "docker_compose":
+        docker = _mapping(
+            execution.get("docker_compose"), "foldseek.execution.docker_compose"
+        )
+        digest = _string(
+            docker.get("image_digest"),
+            "foldseek.execution.docker_compose.image_digest",
+            nullable=True,
+        )
+        if digest is not None and not re.fullmatch(r"sha256:[a-fA-F0-9]+", digest):
+            raise ToolConfigurationError("Foldseek image_digest must use sha256:<hex>")
+        image = str(_string(docker.get("image"), "foldseek image"))
+        if digest is not None and "@" in image:
+            raise ToolConfigurationError("Foldseek image and image_digest overlap")
+        image_override = os.environ.get("FOLDSEEK_IMAGE", "").strip()
+        if image_override:
+            if "@" in image_override:
+                image, digest = image_override.rsplit("@", maxsplit=1)
+                if not image or not re.fullmatch(r"sha256:[a-fA-F0-9]+", digest):
+                    raise ToolConfigurationError(
+                        "FOLDSEEK_IMAGE digest reference must use image@sha256:..."
+                    )
+            else:
+                image = image_override
+                digest = None
+        docker_config = FoldseekDockerConfig(
+            docker_executable=str(
+                _string(docker.get("docker_executable"), "foldseek docker executable")
+            ),
+            compose_file=Path(
+                str(_string(docker.get("compose_file"), "foldseek compose file"))
+            ),
+            service=str(_string(docker.get("service"), "foldseek service")),
+            image=image,
+            image_digest=digest,
+        )
+    else:
+        command = _mapping(execution.get("command"), "foldseek.execution.command")
+        prefix = command.get("prefix")
+        version_arguments = command.get("version_arguments")
+        if not isinstance(prefix, list) or any(
+            not isinstance(item, str) or not item for item in prefix
+        ):
+            raise ToolConfigurationError(
+                "foldseek command prefix must be a string list"
+            )
+        if not isinstance(version_arguments, list) or any(
+            not isinstance(item, str) or not item for item in version_arguments
+        ):
+            raise ToolConfigurationError(
+                "foldseek command version_arguments must be a string list"
+            )
+        command_config = FoldseekCommandConfig(
+            prefix=tuple(prefix),
+            executable=str(_string(command.get("executable"), "foldseek executable")),
+            version_arguments=tuple(version_arguments),
+        )
     fingerprint = _string(
         database.get("fingerprint"), "foldseek.database.fingerprint", nullable=True
     )
@@ -212,17 +274,9 @@ def foldseek_config_from_mapping(value: dict[str, Any]) -> FoldseekConfig:
     )
     return FoldseekConfig(
         required=required,
-        docker=FoldseekDockerConfig(
-            docker_executable=str(
-                _string(docker.get("docker_executable"), "foldseek docker executable")
-            ),
-            compose_file=Path(
-                str(_string(docker.get("compose_file"), "foldseek compose file"))
-            ),
-            service=str(_string(docker.get("service"), "foldseek service")),
-            image=image,
-            image_digest=digest,
-        ),
+        strategy=strategy,
+        docker=docker_config,
+        command=command_config,
         database=FoldseekDatabaseConfig(
             path=Path(str(_string(database.get("path"), "foldseek.database.path"))),
             name=database_name,
@@ -310,21 +364,43 @@ class FoldseekTool(ExternalTool):
         """Construct Docker Compose argv without invoking a shell."""
 
         config = self.config
-        output = self.output_mount / "foldseek.tsv"
-        database = self.database_mount / config.database.name
+        environment = None
+        if config.strategy == "docker_compose":
+            assert config.docker is not None
+            output = self.output_mount / "foldseek.tsv"
+            database = self.database_mount / config.database.name
+            prefix = [
+                config.docker.docker_executable,
+                "compose",
+                "-f",
+                str(config.docker.compose_file),
+                "run",
+                "--rm",
+                config.docker.service,
+            ]
+            query = self.query_mount
+            temporary = self.tmp_mount
+            environment = {
+                "FOLDSEEK_IMAGE": config.docker.image_reference,
+                "FOLDSEEK_QUERY_DIR": str(query_directory.resolve()),
+                "FOLDSEEK_DB_DIR": str(config.database.path.resolve()),
+                "FOLDSEEK_OUTPUT_DIR": str(output_directory.resolve()),
+                "FOLDSEEK_TMP_DIR": str(temporary_directory.resolve()),
+            }
+        else:
+            assert config.command is not None
+            prefix = [*config.command.prefix, config.command.executable]
+            query = query_directory
+            database = config.database.path / config.database.name
+            output = output_directory / "foldseek.tsv"
+            temporary = temporary_directory
         argv = [
-            config.docker.docker_executable,
-            "compose",
-            "-f",
-            str(config.docker.compose_file),
-            "run",
-            "--rm",
-            config.docker.service,
+            *prefix,
             "easy-search",
-            str(self.query_mount),
+            str(query),
             str(database),
             str(output),
-            str(self.tmp_mount),
+            str(temporary),
             "--format-output",
             ",".join(FOLDSEEK_OUTPUT_FIELDS),
             "--threads",
@@ -338,13 +414,7 @@ class FoldseekTool(ExternalTool):
             argv.extend(("-s", str(config.parameters.sensitivity)))
         return CommandSpec.from_sequence(
             argv,
-            environment={
-                "FOLDSEEK_IMAGE": config.docker.image_reference,
-                "FOLDSEEK_QUERY_DIR": str(query_directory.resolve()),
-                "FOLDSEEK_DB_DIR": str(config.database.path.resolve()),
-                "FOLDSEEK_OUTPUT_DIR": str(output_directory.resolve()),
-                "FOLDSEEK_TMP_DIR": str(temporary_directory.resolve()),
-            },
+            environment=environment,
         )
 
     def database_artifacts(self) -> dict[str, Path]:
@@ -358,6 +428,28 @@ class FoldseekTool(ExternalTool):
     ) -> tuple[SoftwareProvenance, ...]:
         """Capture Docker, Compose, and non-running image metadata."""
 
+        if self.config.strategy == "command":
+            assert self.config.command is not None
+            executable = (
+                self.config.command.prefix[0]
+                if self.config.command.prefix
+                else self.config.command.executable
+            )
+            arguments = (
+                (
+                    *self.config.command.prefix[1:],
+                    self.config.command.executable,
+                    *self.config.command.version_arguments,
+                )
+                if self.config.command.prefix
+                else self.config.command.version_arguments
+            )
+            return (
+                backend.capture_version(
+                    executable, name="foldseek", arguments=arguments
+                ),
+            )
+        assert self.config.docker is not None
         executable = self.config.docker.docker_executable
         return (
             backend.capture_version(executable, name="docker"),
@@ -379,8 +471,13 @@ class FoldseekTool(ExternalTool):
     def foldseek_software(self) -> SoftwareProvenance:
         """Represent Foldseek using the configured release/image identity."""
 
+        executable = (
+            self.config.docker.image_reference
+            if self.config.docker is not None
+            else self.config.command.executable
+        )
         return SoftwareProvenance(
             name="foldseek",
             version=self.config.software_version,
-            executable=self.config.docker.image_reference,
+            executable=executable,
         )

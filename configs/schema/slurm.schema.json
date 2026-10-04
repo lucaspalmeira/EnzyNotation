@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enzynotation.org/schema/v1/slurm.schema.json",
+  "title": "EnzyNotation Slurm execution configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "slurm"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "slurm": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sbatch_executable", "stage_script", "defaults", "stages", "run_overrides"],
+      "properties": {
+        "sbatch_executable": {"type": "string", "minLength": 1},
+        "stage_script": {"type": "string", "minLength": 1},
+        "defaults": {"$ref": "#/$defs/resources"},
+        "stages": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/$defs/resources"}
+        },
+        "run_overrides": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/$defs/resources"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "nullableString": {"type": ["string", "null"], "minLength": 1},
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "partition": {"$ref": "#/$defs/nullableString"},
+        "account": {"$ref": "#/$defs/nullableString"},
+        "qos": {"$ref": "#/$defs/nullableString"},
+        "cpus_per_task": {"type": ["integer", "null"], "minimum": 1},
+        "memory": {"$ref": "#/$defs/nullableString"},
+        "time": {
+          "type": ["string", "null"],
+          "pattern": "^(?:[0-9]+-)?[0-9]{1,2}:[0-9]{2}:[0-9]{2}$"
+        },
+        "gpus": {"type": ["integer", "null"], "minimum": 0},
+        "gres": {"$ref": "#/$defs/nullableString"},
+        "constraint": {"$ref": "#/$defs/nullableString"},
+        "nodes": {"type": ["integer", "null"], "minimum": 1},
+        "ntasks": {"type": ["integer", "null"], "minimum": 1}
+      }
+    }
+  }
+}

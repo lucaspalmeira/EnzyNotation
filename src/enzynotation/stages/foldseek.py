@@ -93,9 +93,9 @@ class FoldseekStage(Stage):
         metadata = self.foldseek_config.database.metadata
         if metadata.is_file():
             files["reference_metadata"] = metadata
-        compose = self.foldseek_config.docker.compose_file
-        if compose.is_file():
-            files["foldseek_compose"] = compose
+        docker = self.foldseek_config.docker
+        if docker is not None and docker.compose_file.is_file():
+            files["foldseek_compose"] = docker.compose_file
         fingerprint = self.foldseek_config.database.fingerprint
         if fingerprint is not None and fingerprint.is_file():
             files["foldseek_database_fingerprint"] = fingerprint
@@ -277,10 +277,12 @@ class FoldseekStage(Stage):
             "name": "foldseek",
             "version": software.version,
             "executable": software.executable,
-            "container_image": self.foldseek_config.docker.image,
         }
-        if self.foldseek_config.docker.image_digest is not None:
-            tool["container_digest"] = self.foldseek_config.docker.image_digest
+        docker = self.foldseek_config.docker
+        if docker is not None:
+            tool["container_image"] = docker.image
+            if docker.image_digest is not None:
+                tool["container_digest"] = docker.image_digest
         return {
             "run_id": context.run_id,
             "stage_id": self.stage_id,
@@ -449,7 +451,11 @@ class FoldseekStage(Stage):
         atomic_write_json(config_output, self.configuration(context))
         atomic_write_text(evidence_output, "")
         config = self.foldseek_config
-        if not config.docker.compose_file.is_file():
+        if (
+            config.strategy == "docker_compose"
+            and config.docker is not None
+            and not config.docker.compose_file.is_file()
+        ):
             return self._failure(
                 summary,
                 evidence_output,
@@ -498,32 +504,42 @@ class FoldseekStage(Stage):
                 str(exc),
             )
         runtime = self.tool.capture_runtime_versions(context.backend)
-        docker, compose, image = runtime
-        if docker.version_return_code not in {None, 0}:
+        if config.strategy == "docker_compose":
+            docker, compose, image = runtime
+            if docker.version_return_code not in {None, 0}:
+                return self._failure(
+                    summary,
+                    evidence_output,
+                    config_output,
+                    "docker_runtime_unavailable",
+                    "Docker version could not be captured",
+                    software=runtime,
+                )
+            if compose.version_return_code not in {None, 0}:
+                return self._failure(
+                    summary,
+                    evidence_output,
+                    config_output,
+                    "docker_compose_unavailable",
+                    "Docker Compose version could not be captured",
+                    software=runtime,
+                )
+            if image.version_return_code not in {None, 0}:
+                return self._failure(
+                    summary,
+                    evidence_output,
+                    config_output,
+                    "foldseek_image_unavailable",
+                    "configured Foldseek image metadata is unavailable",
+                    software=runtime,
+                )
+        elif runtime[0].version_return_code not in {None, 0}:
             return self._failure(
                 summary,
                 evidence_output,
                 config_output,
-                "docker_runtime_unavailable",
-                "Docker version could not be captured",
-                software=runtime,
-            )
-        if compose.version_return_code not in {None, 0}:
-            return self._failure(
-                summary,
-                evidence_output,
-                config_output,
-                "docker_compose_unavailable",
-                "Docker Compose version could not be captured",
-                software=runtime,
-            )
-        if image.version_return_code not in {None, 0}:
-            return self._failure(
-                summary,
-                evidence_output,
-                config_output,
-                "foldseek_image_unavailable",
-                "configured Foldseek image metadata is unavailable",
+                "foldseek_runtime_unavailable",
+                "Foldseek command version could not be captured",
                 software=runtime,
             )
         output_directory = stage_paths.raw / "work-output"

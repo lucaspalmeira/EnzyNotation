@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
@@ -199,6 +200,31 @@ class ManifestStore:
         """Publish a complete manifest atomically."""
 
         atomic_write_json(self.path, manifest.to_dict())
+
+    @contextmanager
+    def _locked(self):
+        """Serialize read/merge/write operations on shared HPC storage."""
+
+        import fcntl
+
+        lock_path = self.path.with_suffix(self.path.suffix + ".lock")
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        with lock_path.open("a+", encoding="utf-8") as handle:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+    def merge_write(self, manifest: RunManifest) -> None:
+        """Atomically merge concurrent stage entries before publishing."""
+
+        with self._locked():
+            current = self.load()
+            if current is not None:
+                manifest.created_at = current.created_at
+                manifest.stages = {**current.stages, **manifest.stages}
+            self.write(manifest)
 
 
 class StageStateStore:

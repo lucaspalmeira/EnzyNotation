@@ -70,9 +70,9 @@ stages/structures/normalized/structure_summary.json
 
 ## Foldseek runtime
 
-Foldseek uses only the provider-specific Compose adapter in
-`docker/foldseek.compose.yml`. The default image is the official published
-release:
+For local/container execution, Foldseek uses the provider-specific Compose
+adapter in `docker/foldseek.compose.yml`. The default image is the official
+published release:
 
 ```text
 ghcr.io/steineggerlab/foldseek:10-941cd33
@@ -114,6 +114,12 @@ docker compose -f docker/foldseek.compose.yml run --rm foldseek \
 The query directory and database directory are mounted read-only. Output and
 temporary directories are writable. Host and container paths remain execution
 details and are never used as scientific identifiers.
+
+On HPC, the same provider also accepts `execution.strategy: command`. Its
+`prefix` may be empty for a native executable or contain an administrator
+wrapper such as `apptainer exec /containers/foldseek.sif`. Command execution
+uses the same output fields, parser, filters, evidence schema, correlation
+groups, cache inputs, and scientific interpretation as the Compose strategy.
 
 ## External database and metadata
 

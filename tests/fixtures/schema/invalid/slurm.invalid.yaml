@@ -1,0 +1,8 @@
+schema_version: 1
+slurm:
+  sbatch_executable: sbatch
+  stage_script: slurm/run_stage.sbatch
+  defaults:
+    cpus_per_task: 0
+  stages: {}
+  run_overrides: {}

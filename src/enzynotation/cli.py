@@ -9,6 +9,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from enzynotation import __version__
+from enzynotation.backends.slurm import SlurmBackend
 from enzynotation.config import load_config
 from enzynotation.databases import (
     build_database_manifest,
@@ -25,9 +26,12 @@ from enzynotation.fasta import (
 )
 from enzynotation.integration import load_integration_config
 from enzynotation.logging_utils import configure_logging
+from enzynotation.paths import RunPaths
+from enzynotation.provenance import create_run_id, utc_now
 from enzynotation.reporting import load_report_config
 from enzynotation.rules import load_ec_rules
 from enzynotation.runner import PipelineRunner
+from enzynotation.slurm import build_slurm_plan, load_slurm_config, write_slurm_plan
 from enzynotation.stages.blast import BlastStage
 from enzynotation.stages.clean import CleanStage
 from enzynotation.stages.domains import DomainsStage
@@ -38,7 +42,7 @@ from enzynotation.stages.report import ReportStage
 from enzynotation.stages.structures import StructuresStage
 from enzynotation.stages.tmalign import TMAlignStage
 from enzynotation.stages.validate import ValidationStage
-from enzynotation.state import RunStatus
+from enzynotation.state import RunStatus, StageStatus
 from enzynotation.structure_mapping import load_structures_config
 from enzynotation.tools.blast import load_blast_config
 from enzynotation.tools.clean import load_clean_config
@@ -157,6 +161,26 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="fail if the selected run already exists",
     )
+    run.add_argument(
+        "--backend",
+        choices=("local", "slurm"),
+        default="local",
+        help="workflow execution backend (default: local)",
+    )
+    run.add_argument(
+        "--slurm-config",
+        type=Path,
+        default=Path("configs/slurm/default.yaml"),
+        metavar="PATH",
+        help="Slurm resources and submission configuration",
+    )
+    run.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="render the Slurm DAG and sbatch argv without submission",
+    )
+    run.add_argument("--stage-id", help=argparse.SUPPRESS)
+    run.add_argument("--slurm-worker", action="store_true", help=argparse.SUPPRESS)
     run.add_argument(
         "--blast-config",
         type=Path,
@@ -294,15 +318,9 @@ def _run_validate(args: argparse.Namespace) -> int:
     return 0
 
 
-def _run_pipeline(args: argparse.Namespace) -> int:
-    config = load_config(args.config)
-    logging_config = config.section("logging")
-    configure_logging(str(logging_config["level"]))
-    runner = PipelineRunner(
-        config,
-        results_root=args.results_dir,
-        logs_root=args.logs_dir,
-    )
+def _build_workflow(args: argparse.Namespace) -> Workflow:
+    """Construct the canonical stage DAG shared by local and Slurm execution."""
+
     stages = [ValidationStage()]
     if args.blast_config is not None:
         blast_config = load_blast_config(args.blast_config)
@@ -390,10 +408,157 @@ def _run_pipeline(args: argparse.Namespace) -> int:
         )
     if args.report:
         stages.append(ReportStage(load_report_config(args.report_config)))
-    workflow = Workflow(stages) if len(stages) > 1 else None
+    return Workflow(stages)
+
+
+def _worker_argv(args: argparse.Namespace, run_id: str) -> tuple[str, ...]:
+    """Reconstruct a safe local worker invocation from parsed run options."""
+
+    argv = [
+        "enzynotation",
+        "run",
+        str(args.input),
+        "--run-id",
+        run_id,
+        "--results-dir",
+        str(args.results_dir),
+        "--logs-dir",
+        str(args.logs_dir),
+        "--backend",
+        "local",
+    ]
+    for config in args.config:
+        argv.extend(("--config", str(config)))
+    valued = (
+        ("--blast-config", args.blast_config),
+        ("--clean-config", args.clean_config),
+        ("--family-config", args.family_config),
+        ("--hmmer-config", args.hmmer_config),
+        ("--interpro-config", args.interpro_config),
+        ("--structures-config", args.structures_config),
+        ("--foldseek-config", args.foldseek_config),
+        ("--tmalign-config", args.tmalign_config),
+        ("--integration-config", args.integration_config),
+        ("--confidence-config", args.confidence_config),
+        ("--ec-rules", args.ec_rules),
+        ("--report-config", args.report_config),
+    )
+    for option, value in valued:
+        if value is not None:
+            argv.extend((option, str(value)))
+    if args.motifs:
+        argv.append("--motifs")
+    if args.report:
+        argv.append("--report")
+    return tuple(argv)
+
+
+def _run_slurm(args: argparse.Namespace, workflow: Workflow) -> int:
+    """Plan or submit the existing workflow without executing science locally."""
+
+    slurm_config = load_slurm_config(args.slurm_config)
+    backend = SlurmBackend(slurm_config)
+    run_id = args.run_id or create_run_id()
+    paths = RunPaths(args.results_dir, args.logs_dir, run_id)
+    plans = build_slurm_plan(workflow, slurm_config, paths)
+    worker_argv = _worker_argv(args, run_id)
+    synthetic_ids = {
+        plan.stage_id: str(100000 + index) for index, plan in enumerate(plans, start=1)
+    }
+    rendered_jobs = []
+    for plan in plans:
+        afterok = tuple(synthetic_ids[stage] for stage in plan.afterok_stages)
+        afterany = tuple(synthetic_ids[stage] for stage in plan.afterany_stages)
+        argv = backend.build_sbatch_argv(
+            plan,
+            worker_argv,
+            afterok_job_ids=afterok,
+            afterany_job_ids=afterany,
+        )
+        rendered_jobs.append(
+            {
+                "stage_id": plan.stage_id,
+                "required": plan.required,
+                "scheduler_state": "planned",
+                "afterok_stages": list(plan.afterok_stages),
+                "afterany_stages": list(plan.afterany_stages),
+                "resolved_resources": plan.resources.to_dict(),
+                "stdout": str(plan.stdout_pattern),
+                "stderr": str(plan.stderr_pattern),
+                "sbatch_command": list(argv),
+            }
+        )
+    document: dict[str, object] = {
+        "schema_version": 1,
+        "run_id": run_id,
+        "backend": "slurm",
+        "dry_run": args.dry_run,
+        "generated_at": utc_now(),
+        "configuration": str(slurm_config.source_path),
+        "worker_command": list(worker_argv),
+        "jobs": rendered_jobs,
+        "submissions": [],
+    }
+    if args.dry_run:
+        print(json.dumps(document, indent=2, sort_keys=True))
+        return 0
+
+    paths.prepare()
+    plan_path = paths.run_root / "slurm" / "plan.json"
+    write_slurm_plan(plan_path, document)
+    job_ids: dict[str, str] = {}
+    submissions = []
+    for plan in plans:
+        argv = backend.build_sbatch_argv(
+            plan,
+            worker_argv,
+            afterok_job_ids=tuple(job_ids[stage] for stage in plan.afterok_stages),
+            afterany_job_ids=tuple(job_ids[stage] for stage in plan.afterany_stages),
+        )
+        submission = backend.submit(argv, plan)
+        job_ids[plan.stage_id] = submission.job_id
+        submissions.append(submission.to_dict())
+        document["submissions"] = submissions
+        write_slurm_plan(plan_path, document)
+    print(f"RUN SUBMITTED: {run_id}")
+    print(f"Slurm plan: {plan_path}")
+    for stage_id, job_id in job_ids.items():
+        print(f"{stage_id}: {job_id}")
+    return 0
+
+
+def _run_pipeline(args: argparse.Namespace) -> int:
+    config = load_config(args.config)
+    logging_config = config.section("logging")
+    configure_logging(str(logging_config["level"]))
+    workflow = _build_workflow(args)
+    if args.dry_run and args.backend != "slurm":
+        raise EnzyNotationError("--dry-run is available only with --backend slurm")
+    if args.stage_id is not None and args.backend != "local":
+        raise EnzyNotationError("scheduled stage workers must use --backend local")
+    if args.backend == "slurm":
+        return _run_slurm(args, workflow)
+    runner = PipelineRunner(
+        config,
+        results_root=args.results_dir,
+        logs_root=args.logs_dir,
+    )
+    if args.stage_id is not None:
+        if args.run_id is None:
+            raise EnzyNotationError("--stage-id requires --run-id")
+        result = runner.run_stage(
+            args.input,
+            workflow=workflow,
+            stage_id=args.stage_id,
+            run_id=args.run_id,
+            resume=not args.no_resume,
+        )
+        outcome = result.stage_outcomes.get(args.stage_id)
+        print(f"STAGE {args.stage_id} {outcome.value.upper()}: {result.run_id}")
+        return 0 if outcome in {StageStatus.COMPLETED, StageStatus.SKIPPED} else 1
     result = runner.run(
         args.input,
-        workflow=workflow,
+        workflow=workflow if len(workflow) > 1 else None,
         run_id=args.run_id,
         resume=not args.no_resume,
     )

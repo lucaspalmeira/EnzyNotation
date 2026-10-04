@@ -28,9 +28,9 @@
     "execution": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["strategy", "docker_compose"],
+      "required": ["strategy"],
       "properties": {
-        "strategy": {"const": "docker_compose"},
+        "strategy": {"enum": ["docker_compose", "command"]},
         "docker_compose": {
           "type": "object",
           "additionalProperties": false,
@@ -47,8 +47,34 @@
               ]
             }
           }
+        },
+        "command": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["prefix", "executable", "version_arguments"],
+          "properties": {
+            "prefix": {
+              "type": "array",
+              "items": {"$ref": "#/$defs/nonEmptyString"}
+            },
+            "executable": {"$ref": "#/$defs/nonEmptyString"},
+            "version_arguments": {
+              "type": "array",
+              "items": {"$ref": "#/$defs/nonEmptyString"}
+            }
+          }
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"strategy": {"const": "docker_compose"}}},
+          "then": {"required": ["docker_compose"]}
+        },
+        {
+          "if": {"properties": {"strategy": {"const": "command"}}},
+          "then": {"required": ["command"]}
+        }
+      ]
     },
     "database": {
       "type": "object",

@@ -1,0 +1,21 @@
+schema_version: 1
+slurm:
+  sbatch_executable: sbatch
+  stage_script: slurm/run_stage.sbatch
+  defaults:
+    partition: null
+    account: null
+    qos: null
+    cpus_per_task: 4
+    memory: 8G
+    time: "02:00:00"
+    gpus: 0
+    gres: null
+    constraint: null
+    nodes: 1
+    ntasks: 1
+  stages:
+    blast: {cpus_per_task: 8, memory: 16G, time: "04:00:00"}
+    clean: {cpus_per_task: 8, memory: 24G, time: "06:00:00"}
+    foldseek: {cpus_per_task: 8, memory: 16G, time: "04:00:00"}
+  run_overrides: {}

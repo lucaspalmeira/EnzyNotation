@@ -17,6 +17,11 @@ EXAMPLE_DIRECTORY = Path("examples/configs")
 INVALID_DIRECTORY = Path("tests/fixtures/schema/invalid")
 
 CONTRACTS = {
+    "slurm": (
+        SCHEMA_DIRECTORY / "slurm.schema.json",
+        Path("configs/slurm/default.yaml"),
+        INVALID_DIRECTORY / "slurm.invalid.yaml",
+    ),
     "databases": (
         SCHEMA_DIRECTORY / "databases.schema.json",
         Path("configs/databases.yaml"),

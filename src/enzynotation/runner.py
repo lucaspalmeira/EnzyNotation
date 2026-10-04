@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import socket
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -37,6 +39,7 @@ from enzynotation.state import (
     StageStateStore,
     StageStatus,
     atomic_write_bytes,
+    atomic_write_json,
     atomic_write_text,
     outputs_are_intact,
 )
@@ -152,7 +155,7 @@ class PipelineRunner:
             workflow=self._workflow_description(workflow),
             stages=dict(previous.stages) if previous else {},
         )
-        store.write(manifest)
+        store.merge_write(manifest)
         return manifest, store
 
     @staticmethod
@@ -321,6 +324,7 @@ class PipelineRunner:
         input_fasta: Path,
         *,
         workflow: Workflow | None = None,
+        manifest_workflow: Workflow | None = None,
         run_id: str | None = None,
         resume: bool = True,
     ) -> RunResult:
@@ -350,7 +354,7 @@ class PipelineRunner:
 
         manifest, manifest_store = self._initialize_manifest(
             paths=paths,
-            workflow=selected_workflow,
+            workflow=manifest_workflow or selected_workflow,
             input_fasta=source,
             config_checksum=config_checksum,
             config_sources=config_sources,
@@ -379,7 +383,7 @@ class PipelineRunner:
                 outcomes[stage.stage_id] = StageStatus.NOT_AVAILABLE
                 manifest.stages[stage.stage_id] = self._manifest_stage_entry(state)
                 manifest.updated_at = utc_now()
-                manifest_store.write(manifest)
+                manifest_store.merge_write(manifest)
                 if stage.required:
                     required_failure = True
                     break
@@ -448,7 +452,7 @@ class PipelineRunner:
                 outcomes[stage.stage_id] = StageStatus.FAILED
                 manifest.stages[stage.stage_id] = self._manifest_stage_entry(state)
                 manifest.updated_at = utc_now()
-                manifest_store.write(manifest)
+                manifest_store.merge_write(manifest)
                 if stage.required:
                     required_failure = True
                     break
@@ -473,7 +477,7 @@ class PipelineRunner:
                     cached, action=StageStatus.SKIPPED
                 )
                 manifest.updated_at = utc_now()
-                manifest_store.write(manifest)
+                manifest_store.merge_write(manifest)
                 continue
 
             attempt = store.next_attempt()
@@ -522,7 +526,7 @@ class PipelineRunner:
             outcomes[stage.stage_id] = state.status
             manifest.stages[stage.stage_id] = self._manifest_stage_entry(state)
             manifest.updated_at = utc_now()
-            manifest_store.write(manifest)
+            manifest_store.merge_write(manifest)
 
             if state.status is not StageStatus.COMPLETED:
                 if stage.required:
@@ -537,10 +541,124 @@ class PipelineRunner:
         else:
             manifest.status = RunStatus.COMPLETED
         manifest.updated_at = utc_now()
-        manifest_store.write(manifest)
+        manifest_store.merge_write(manifest)
         return RunResult(
             run_id=selected_run_id,
             status=manifest.status,
             manifest_path=paths.manifest,
             stage_outcomes=outcomes,
         )
+
+    @staticmethod
+    def _workflow_for_stage(workflow: Workflow, stage_id: str) -> Workflow:
+        """Return one stage and its declared ancestors in deterministic order."""
+
+        by_id = {stage.stage_id: stage for stage in workflow}
+        if stage_id not in by_id:
+            raise RunnerError(f"Unknown workflow stage: {stage_id}")
+        selected: set[str] = set()
+
+        def include(identifier: str) -> None:
+            if identifier in selected:
+                return
+            stage = by_id[identifier]
+            for dependency in stage.dependencies:
+                include(dependency)
+            selected.add(identifier)
+
+        include(stage_id)
+        return Workflow(stage for stage in workflow if stage.stage_id in selected)
+
+    def run_stage(
+        self,
+        input_fasta: Path,
+        *,
+        workflow: Workflow,
+        stage_id: str,
+        run_id: str,
+        resume: bool = True,
+    ) -> RunResult:
+        """Execute one scheduled stage through the existing resumable runner.
+
+        Declared ancestors are included so their cache and state are verified.
+        Scheduler-only metadata is stored beside, never inside, evidence records.
+        """
+
+        paths = RunPaths(self.results_root, self.logs_root, validate_run_id(run_id))
+        scheduler_path = paths.for_stage(stage_id).root / "scheduler.json"
+        job_id = os.environ.get("SLURM_JOB_ID")
+        started = utc_now()
+        if job_id:
+            atomic_write_json(
+                scheduler_path,
+                {
+                    "schema_version": 1,
+                    "stage_id": stage_id,
+                    "job_id": job_id,
+                    "dependency_job_ids": [
+                        value
+                        for value in os.environ.get("SLURM_JOB_DEPENDENCY", "").split(
+                            ":"
+                        )
+                        if value.isdigit()
+                    ],
+                    "scheduler_state": "running",
+                    "started_at": started,
+                    "execution_host": socket.gethostname(),
+                    "node_list": os.environ.get("SLURM_JOB_NODELIST"),
+                    "container_runtime_command": os.environ.get(
+                        "ENZYNOTATION_CONTAINER_COMMAND"
+                    ),
+                    "exit_status": None,
+                },
+            )
+        selected = self._workflow_for_stage(workflow, stage_id)
+        result = self.run(
+            input_fasta,
+            workflow=selected,
+            manifest_workflow=workflow,
+            run_id=run_id,
+            resume=resume,
+        )
+        target_status = result.stage_outcomes.get(stage_id, StageStatus.NOT_AVAILABLE)
+        if stage_id != workflow.stages[-1].stage_id:
+            store = ManifestStore(paths.manifest)
+            manifest = store.load()
+            if manifest is not None:
+                manifest.status = RunStatus.RUNNING
+                manifest.updated_at = utc_now()
+                store.merge_write(manifest)
+        if job_id:
+            atomic_write_json(
+                scheduler_path,
+                {
+                    "schema_version": 1,
+                    "stage_id": stage_id,
+                    "job_id": job_id,
+                    "dependency_job_ids": [
+                        value
+                        for value in os.environ.get("SLURM_JOB_DEPENDENCY", "").split(
+                            ":"
+                        )
+                        if value.isdigit()
+                    ],
+                    "scheduler_state": (
+                        "completed"
+                        if target_status in {StageStatus.COMPLETED, StageStatus.SKIPPED}
+                        else "failed"
+                    ),
+                    "started_at": started,
+                    "finished_at": utc_now(),
+                    "execution_host": socket.gethostname(),
+                    "node_list": os.environ.get("SLURM_JOB_NODELIST"),
+                    "container_runtime_command": os.environ.get(
+                        "ENZYNOTATION_CONTAINER_COMMAND"
+                    ),
+                    "exit_status": (
+                        0
+                        if target_status in {StageStatus.COMPLETED, StageStatus.SKIPPED}
+                        else 1
+                    ),
+                },
+            )
+        return result

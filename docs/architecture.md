@@ -218,6 +218,23 @@ invalidating upstream provider stages.
 Milestone 9 adds the independent `configs/databases.yaml` registry and
 `compose.yaml`. Registry verification may produce a deterministic resource
 manifest but does not modify provider configuration or scientific resources.
+Milestone 10 adds `configs/slurm/default.yaml`. Scheduler defaults are
+overridden by stage settings and then run/site overrides. These resources
+affect execution only. The same `Workflow`, stages, signatures, evidence,
+integration policy, and report code are used by local and scheduled execution.
+
+## HPC execution boundary
+
+The Slurm planner maps the existing DAG to stage jobs. Direct scientific
+dependencies use `afterok`; integration also waits for independent optional
+providers using `afterany` so optional failure remains visible. The generic
+SBATCH script delegates to the local stage runner and contains no provider
+science. Concurrent branch state is stage-owned, and manifest updates are
+atomically merged under a small lock.
+
+Apptainer is the HPC runtime boundary. Scientific resources remain external
+bind mounts at the same logical paths used by Docker Compose. Slurm never
+starts Docker Compose, and neither runtime changes evidence or inference.
 
 ## Container deployment boundary
 

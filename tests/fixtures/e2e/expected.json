@@ -1,0 +1,5 @@
+{
+  "q_conflict": {"predicted_ec": null, "confidence": "unresolved"},
+  "q_exact": {"predicted_ec": "1.1.1.1", "confidence": "high"},
+  "q_partial": {"predicted_ec": "3.2.1.-", "confidence": "low"}
+}
